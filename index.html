@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Hubbe Garden Pro</title>
+<style>
+:root { 
+    --olive: #606C38; --dark: #283618; --cream: #FEFAE0; --rust: #BC6C25; 
+    --white: #fff; --blue: #2b6a94; --gold: #cca43b; --red: #ae2012; --green: #2d6a4f;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100dvh; margin: 0; padding: 0; overflow: hidden; font-family: -apple-system, sans-serif; background: var(--cream); }
+body { display: flex; flex-direction: column; padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); }
+
+header { background: var(--white); padding: 10px 15px; border-bottom: 1px solid #ddd; flex-shrink: 0; z-index: 100; }
+.header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.app-title { margin: 0; font-family: "Georgia", serif; font-size: 1.2rem; color: var(--olive); font-weight: 800; }
+
+.header-btns { display: flex; gap: 8px; }
+.circle-btn { width: 36px; height: 36px; border-radius: 10px; border: none; display: flex; align-items: center; justify-content: center; font-size: 1rem; cursor: pointer; color: white; }
+.lock-btn.locked { background: var(--red); }
+.lock-btn.unlocked { background: var(--green); }
+.settings-btn { background: #eee; color: #333; }
+
+.nav-row { display: flex; align-items: center; gap: 8px; }
+.tabs { display: flex; gap: 8px; overflow-x: auto; padding: 2px 0; flex-grow: 1; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
+.tab { padding: 6px 12px; background: #eee; border-radius: 10px; white-space: nowrap; font-weight: bold; font-size: 0.75rem; }
+.tab.active { background: var(--olive); color: white; }
+.grid-trigger { background: #eee; border: none; border-radius: 8px; padding: 5px 10px; font-weight: bold; }
+
+.timeline-ctrl { background: #f1f1f1; max-height: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; gap: 20px; font-size: 0.8rem; transition: all 0.3s; }
+.timeline-ctrl.visible { max-height: 45px; padding: 5px 15px; border-bottom: 1px solid #ddd; }
+.arrow { background: #ddd; border: none; border-radius: 50%; width: 26px; height: 26px; font-weight: bold; }
+
+#canvas-container { position: relative; flex: 1; display: flex; align-items: center; justify-content: center; background: #bbb; overflow: hidden; width: 100%; }
+#garden-img { max-width: 100%; max-height: 100%; object-fit: contain; pointer-events: none; display: block; }
+
+.spot-wrapper { position: absolute; transform: translate(-50%, -50%); z-index: 50; pointer-events: none; }
+.spot { background: var(--olive); border: 2px solid white; border-radius: 50%; box-shadow: 0 2px 6px rgba(0,0,0,0.3); pointer-events: auto; }
+.spot.small { width: 18px; height: 18px; }
+.spot.medium { width: 28px; height: 28px; }
+.spot.large { width: 40px; height: 40px; }
+.spot-label { background: rgba(255,255,255,0.9); padding: 1px 6px; border-radius: 8px; margin-left: 6px; font-size: 0.7rem; font-weight: bold; white-space: nowrap; }
+
+.bottom-nav { background: var(--white); display: flex; justify-content: space-around; padding: 10px 15px; padding-bottom: calc(10px + env(safe-area-inset-bottom)); border-top: 1px solid #ddd; flex-shrink: 0; }
+.btn-nav { flex: 1; margin: 0 5px; padding: 12px; border: none; border-radius: 12px; font-weight: bold; color: white; }
+
+.modal { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center; z-index: 2000; padding: 20px; }
+.modal-content { background: white; width: 100%; max-width: 400px; padding: 20px; border-radius: 20px; max-height: 90vh; overflow-y: auto; }
+input, textarea, select { width: 100%; padding: 10px; margin: 5px 0 10px 0; border: 1px solid #ccc; border-radius: 10px; font-size: 1rem; }
+label { font-size: 0.75rem; font-weight: bold; display: block; margin-top: 5px; }
+
+#toast { position: fixed; top: 120px; left: 50%; transform: translateX(-50%); color: white; padding: 8px 16px; border-radius: 20px; font-size: 0.8rem; z-index: 3000; display: none; font-weight: bold; }
+#guide { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--rust); color: white; padding: 20px; border-radius: 20px; display: none; z-index: 1500; font-weight: bold; text-align: center; }
+#lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 4000; display: none; justify-content: center; align-items: center; }
+</style>
+</head>
+<body>
+
+<header>
+    <div class="header-top">
+        <h1 class="app-title">🌿 Hubbe Garden</h1>
+        <div class="header-btns">
+            <button id="lockBtn" class="circle-btn lock-btn locked" onclick="toggleLock()">🔒</button>
+            <button class="circle-btn settings-btn" onclick="openSettings()">⚙️</button>
+        </div>
+    </div>
+    <div class="nav-row">
+        <div class="tabs" id="tab-list"></div>
+        <button class="grid-trigger" onclick="openGrid()">▤</button>
+    </div>
+</header>
+
+<div id="toast"></div>
+
+<div class="timeline-ctrl" id="timeline-ui">
+    <button class="arrow" onclick="stepImg(-1)">❮</button>
+    <div style="display:flex; align-items:center; gap:8px;">
+        <span id="imageDate" style="font-weight:bold;"></span>
+        <button onclick="deleteImg()" style="border:none; background:none; color:var(--red);">🗑️</button>
+    </div>
+    <button class="arrow" onclick="stepImg(1)">❯</button>
+</div>
+
+<div id="canvas-container" onclick="handleCanvasClick(event)"></div>
+
+<div class="bottom-nav">
+    <input type="file" id="fileInput" hidden accept="image/*">
+    <button class="btn-nav" style="background:var(--olive)" onclick="document.getElementById('fileInput').click()">📷 Ny bild</button>
+    <button class="btn-nav" style="background:var(--rust)" onclick="startPlacing()">📍 Ny växt</button>
+</div>
+
+<div id="guide">Tryck på växten i bilden!</div>
+
+<div id="gridModal" class="modal">
+    <div class="modal-content">
+        <h3 style="margin:0">Mina Rum</h3>
+        <div id="grid-list" style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:15px;"></div>
+        <button onclick="closeModal('gridModal')" style="width:100%; margin-top:20px; padding:12px; border:none; border-radius:10px; background:#eee;">Stäng</button>
+    </div>
+</div>
+
+<div id="editModal" class="modal">
+    <div class="modal-content">
+        <h3 id="editTitle" style="margin-top:0; color:var(--olive);">Växt</h3>
+        <div style="display:flex; gap:10px; margin-bottom:15px;">
+            <div id="seedBox" style="position:relative; width:80px; height:80px; background:#eee; border-radius:10px; overflow:hidden;"></div>
+            <button onclick="document.getElementById('seedInput').click()" style="flex:1; background:var(--gold); border:none; border-radius:10px; color:white; font-weight:bold;">📷 Fota fröpåse</button>
+            <input type="file" id="seedInput" hidden accept="image/*">
+        </div>
+        <div style="display:flex; gap:10px; margin-bottom:15px;">
+            <button onclick="logAction('💧 Vattnad')" style="flex:1; background:var(--blue); color:white; border:none; padding:12px; border-radius:10px; font-weight:bold;">💧 Vattnad</button>
+            <button onclick="logAction('🧪 Gödslad')" style="flex:1; background:var(--rust); color:white; border:none; padding:12px; border-radius:10px; font-weight:bold;">🧪 Gödslad</button>
+        </div>
+        <label>Namn (Etikett)</label><input type="text" id="pName">
+        <div style="display:flex; gap:10px;">
+            <div style="flex:1"><label>Färg</label><select id="pColor"><option value="var(--olive)">Grön</option><option value="var(--rust)">Brun</option><option value="var(--gold)">Gul</option><option value="var(--blue)">Blå</option><option value="var(--red)">Röd</option></select></div>
+            <div style="flex:1"><label>Storlek</label><select id="pSize"><option value="small">Liten</option><option value="medium">Mellan</option><option value="large">Stor</option></select></div>
+        </div>
+        <div style="display:flex; gap:10px;">
+            <div style="flex:1"><label>Planterad</label><input type="date" id="pPlantDate"></div>
+            <div style="flex:1"><label>Omplanterad</label><input type="date" id="pRepotDate"></div>
+        </div>
+        <label>Flytta till annat rum</label><select id="pMove"></select>
+        <textarea id="pNotes" rows="4"></textarea>
+        <button onclick="saveEdit()" style="width:100%; background:var(--olive); color:white; padding:14px; border:none; border-radius:12px; font-weight:bold;">Spara</button>
+        <button onclick="closeModal('editModal')" style="width:100%; margin-top:8px; border:none; background:#eee; padding:10px; border-radius:10px;">Avbryt</button>
+        <button onclick="deleteSpot()" style="width:100%; margin-top:15px; background:none; border:none; color:var(--red); font-weight:bold;">🗑️ RADERA VÄXT</button>
+    </div>
+</div>
+
+<div id="settingsModal" class="modal">
+    <div class="modal-content">
+        <h3>Verktyg</h3>
+        <button onclick="addRoom()" style="width:100%; background:var(--olive); color:white; padding:12px; border:none; border-radius:10px; font-weight:bold;">+ Nytt område</button>
+        <button onclick="renameRoom()" style="width:100%; margin-top:10px; padding:12px; border:none; border-radius:10px; border:1px solid #ccc; background:none;">Byt namn</button>
+        <hr style="margin:15px 0;">
+        <button onclick="exportData()" style="width:100%; background:var(--blue); color:white; padding:12px; border:none; border-radius:10px;">Export</button>
+        <button onclick="document.getElementById('importInput').click()" style="width:100%; background:var(--gold); color:white; padding:12px; border:none; border-radius:10px; margin-top:10px;">Import</button>
+        <input type="file" id="importInput" hidden onchange="importData(event)">
+        <button onclick="closeModal('settingsModal')" style="width:100%; margin-top:20px; background:#eee; padding:12px; border:none; border-radius:10px;">Stäng</button>
+    </div>
+</div>
+
+<div id="lightbox" onclick="this.style.display='none'"><img id="lbImg" style="max-width:95%; max-height:95%; border-radius:10px; border:3px solid white;"></div>
+
+<script>
+let db, areas = [], activeIdx = 0, isLocked = true, isPlacing = false, currentSpot = null, currentImgIdx = 0, pendingMove = null, tempSeed = null;
+
+const request = indexedDB.open("GardenDB", 1);
+request.onupgradeneeded = e => { db = e.target.result; db.createObjectStore("garden", { keyPath: "id" }); };
+request.onsuccess = e => { db = e.target.result; loadData(); };
+
+async function loadData() {
+    const tx = db.transaction("garden", "readonly");
+    const data = await new Promise(r => { const req = tx.objectStore("garden").get("mainData"); req.onsuccess = () => r(req.result); });
+    if (data) { areas = data.areas; activeIdx = data.activeIdx || 0; }
+    else { areas = [{ id: Date.now(), name: "Inomhus", spots: [], images: [] }]; }
+    render();
+}
+
+function save() { const tx = db.transaction("garden", "readwrite"); tx.objectStore("garden").put({ id: "mainData", areas, activeIdx }); }
+
+function render() {
+    const area = areas[activeIdx];
+    document.getElementById('tab-list').innerHTML = areas.map((a, i) => `<div class="tab ${i===activeIdx?'active':''}" onclick="switchRoom(${i})">${a.name}</div>`).join('');
+    const timeline = document.getElementById('timeline-ui');
+    if (area.images?.length > 1) {
+        timeline.classList.add('visible');
+        document.getElementById('imageDate').innerText = area.images[currentImgIdx].date;
+    } else { timeline.classList.remove('visible'); currentImgIdx = 0; }
+
+    const container = document.getElementById('canvas-container'); container.innerHTML = '';
+    if (area.images?.length > 0) {
+        const img = document.createElement('img'); img.src = area.images[currentImgIdx].data; img.id = "garden-img";
+        container.appendChild(img);
+        img.onload = () => {
+            area.spots.forEach((s, i) => {
+                const wrapper = document.createElement('div'); wrapper.className = 'spot-wrapper';
+                const dot = document.createElement('div'); dot.className = `spot ${s.size||'medium'}`;
+                dot.style.backgroundColor = s.color || 'var(--olive)';
+                const update = () => {
+                    const r = img.getBoundingClientRect(); const c = container.getBoundingClientRect();
+                    wrapper.style.left = (r.left - c.left + (s.x/100)*r.width) + 'px';
+                    wrapper.style.top = (r.top - c.top + (s.y/100)*r.height) + 'px';
+                };
+                let moving = false;
+                const move = e => { if (isLocked) return; moving = true; const r = img.getBoundingClientRect(); const t = e.touches ? e.touches[0] : e; s.x = Math.max(0, Math.min(100, ((t.clientX-r.left)/r.width)*100)); s.y = Math.max(0, Math.min(100, ((t.clientY-r.top)/r.height)*100)); update(); };
+                const end = () => { window.removeEventListener('mousemove', move); window.removeEventListener('touchmove', move); if(moving) save(); setTimeout(()=>moving=false, 50); };
+                dot.onmousedown = dot.ontouchstart = (e) => { if(isLocked) return; e.stopPropagation(); window.addEventListener('mousemove', move); window.addEventListener('touchmove', move); window.addEventListener('mouseup', end, {once:true}); window.addEventListener('touchend', end, {once:true}); };
+                dot.onclick = e => { e.stopPropagation(); if(!moving) openEdit(i); };
+                if(s.name){ const l = document.createElement('div'); l.className='spot-label'; l.innerText=s.name; wrapper.appendChild(l); }
+                wrapper.appendChild(dot); container.appendChild(wrapper); update();
+            });
+        };
+    }
+}
+
+// FIXAD KLICK-LOGIK
+function handleCanvasClick(e) {
+    if(!isPlacing) return;
+    const img = document.getElementById('garden-img'); if(!img) return;
+    const r = img.getBoundingClientRect();
+    
+    // Beräkna x och y relativt till bildens faktiska pixlar i "contain"-läge
+    const x = ((e.clientX - r.left) / r.width) * 100;
+    const y = ((e.clientY - r.top) / r.height) * 100;
+
+    // Kontrollera att klicket är INOM bilden (inte i det gråa tomrummet)
+    if(x >= 0 && x <= 100 && y >= 0 && y <= 100) {
+        if(pendingMove) { 
+            pendingMove.x = x; pendingMove.y = y; 
+            areas[activeIdx].spots.push(pendingMove); 
+            pendingMove = null; 
+        } else { 
+            areas[activeIdx].spots.push({x, y, name:"", notes:"", color:"var(--olive)", size:"medium"}); 
+        }
+        isPlacing = false; 
+        document.getElementById('guide').style.display = 'none'; 
+        render(); 
+        save();
+        if(!pendingMove) openEdit(areas[activeIdx].spots.length - 1);
+    }
+}
+
+function openEdit(idx) {
+    currentSpot = idx; const s = areas[activeIdx].spots[idx];
+    document.getElementById('editTitle').innerText = s.name || "Växt";
+    document.getElementById('pName').value = s.name || "";
+    document.getElementById('pNotes').value = s.notes || "";
+    document.getElementById('pColor').value = s.color || "var(--olive)";
+    document.getElementById('pSize').value = s.size || "medium";
+    document.getElementById('pPlantDate').value = s.plantDate || "";
+    document.getElementById('pRepotDate').value = s.repotDate || "";
+    tempSeed = s.seed || null; drawSeed();
+    const m = document.getElementById('pMove'); m.innerHTML = '<option value="">Behåll här</option>';
+    areas.forEach((a,i) => { if(i!==activeIdx) m.innerHTML += `<option value="${i}">${a.name}</option>`; });
+    document.getElementById('editModal').style.display = 'flex';
+}
+
+function drawSeed() {
+    const b = document.getElementById('seedBox');
+    b.innerHTML = tempSeed ? `<img src="${tempSeed}" onclick="openLightbox(this.src)" style="width:100%; height:100%; object-fit:cover; cursor:pointer;"><button onclick="event.stopPropagation();tempSeed=null;drawSeed()" style="position:absolute; top:0; right:0; background:red; color:white; border:none; border-radius:50%; width:24px; height:24px; font-weight:bold;">×</button>` : '';
+}
+
+function openLightbox(src) { document.getElementById('lbImg').src = src; document.getElementById('lightbox').style.display = 'flex'; }
+function saveEdit() {
+    const s = areas[activeIdx].spots[currentSpot];
+    s.name = document.getElementById('pName').value; s.notes = document.getElementById('pNotes').value;
+    s.color = document.getElementById('pColor').value; s.size = document.getElementById('pSize').value;
+    s.plantDate = document.getElementById('pPlantDate').value; s.repotDate = document.getElementById('pRepotDate').value;
+    s.seed = tempSeed;
+    const mv = document.getElementById('pMove').value;
+    if(mv !== "") { pendingMove = {...s}; areas[activeIdx].spots.splice(currentSpot, 1); activeIdx = parseInt(mv); closeModal('editModal'); render(); startPlacing(); }
+    else { closeModal('editModal'); render(); save(); }
+}
+function logAction(txt) { document.getElementById('pNotes').value = `${txt}: ${new Date().toLocaleDateString()}\n` + document.getElementById('pNotes').value; }
+function toggleLock() { isLocked = !isLocked; const b = document.getElementById('lockBtn'); b.innerText = isLocked?'🔒':'🔓'; b.className = `circle-btn lock-btn ${isLocked?'locked':'unlocked'}`; showToast(isLocked?'LÅST':'UPPLÅST', isLocked?'var(--red)':'var(--green)'); render(); }
+function showToast(m, c) { const t = document.getElementById('toast'); t.innerText = m; t.style.background = c; t.style.display = 'block'; setTimeout(()=>t.style.display='none', 1000); }
+function stepImg(d) { const a = areas[activeIdx]; let n = currentImgIdx + d; if(n>=0 && n<a.images.length) { currentImgIdx = n; render(); } }
+function switchRoom(i) { activeIdx = i; currentImgIdx = (areas[i].images?.length?areas[i].images.length-1:0); render(); save(); }
+function startPlacing() { if(!areas[activeIdx].images?.length) return alert("Ladda upp bild!"); isPlacing = true; document.getElementById('guide').style.display = 'block'; }
+function openGrid() { document.getElementById('grid-list').innerHTML = areas.map((a,i)=>`<div style="background:#f5f5f5;padding:15px;border-radius:12px;text-align:center;font-weight:bold;border:2px solid ${i===activeIdx?'var(--olive)':'transparent'}" onclick="switchRoom(${i});closeModal('gridModal')">${a.name}<br><small>${a.spots.length} st</small></div>`).join(''); document.getElementById('gridModal').style.display='flex'; }
+function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+function openSettings() { document.getElementById('settingsModal').style.display = 'flex'; }
+function deleteSpot() { if(confirm("Radera?")) { areas[activeIdx].spots.splice(currentSpot, 1); closeModal('editModal'); render(); save(); } }
+function deleteImg() { if(confirm("Radera bild?")) { areas[activeIdx].images.splice(currentImgIdx, 1); currentImgIdx = Math.max(0, areas[activeIdx].images.length-1); render(); save(); } }
+function addRoom() { const n = prompt("Namn?"); if(n){ areas.push({id:Date.now(), name:n, spots:[], images:[]}); activeIdx = areas.length-1; render(); save(); closeModal('settingsModal'); } }
+function renameRoom() { const n = prompt("Namn?", areas[activeIdx].name); if(n){ areas[activeIdx].name=n; render(); save(); } }
+function exportData() { const b = new Blob([JSON.stringify({ areas, activeIdx })], { type: "application/json" }); const l = document.createElement("a"); l.href = URL.createObjectURL(b); l.download = `Garden_Backup.json`; l.click(); }
+function importData(ev) { const f = ev.target.files[0]; if(!f) return; const r = new FileReader(); r.onload = e => { const d = JSON.parse(e.target.result); areas = d.areas; activeIdx = d.activeIdx; save(); render(); closeModal('settingsModal'); }; r.readAsText(f); }
+
+async function procImg(f, m = 1200) { return new Promise(r => { const rd = new FileReader(); rd.onload = e => { const i = new Image(); i.onload = () => { const c = document.createElement('canvas'); let w = i.width, h = i.height; if (w > m) { h *= m / w; w = m; } c.width = w; c.height = h; c.getContext('2d').drawImage(i, 0, 0, w, h); r(c.toDataURL('image/jpeg', 0.8)); }; i.src = e.target.result; }; rd.readAsDataURL(f); }); }
+document.getElementById('fileInput').onchange = async e => { const f = e.target.files[0]; if(f) { const c = await procImg(f, 1200); if(!areas[activeIdx].images) areas[activeIdx].images = []; areas[activeIdx].images.push({ data: c, date: new Date().toLocaleDateString() }); currentImgIdx = areas[activeIdx].images.length-1; render(); save(); } };
+document.getElementById('seedInput').onchange = async e => { if(e.target.files[0]) { tempSeed = await procImg(e.target.files[0], 800); drawSeed(); } };
+</script>
+</body>
+</html>
