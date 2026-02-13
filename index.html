@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>Hubbe Pro: Fully Fixed Edition</title>
+<title>Hubbe Pro: History Edition</title>
 <style>
 :root { --olive: #606C38; --dark: #283618; --cream: #FEFAE0; --rust: #BC6C25; --white: #fff; --blue: #2b6a94; --green: #2d6a4f; --red: #ae2012; --gold: #cca43b; }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: sans-serif; }
@@ -13,16 +13,15 @@ body { margin: 0; height: 100dvh; display: flex; flex-direction: column; backgro
 header { background: var(--white); padding: 10px; border-bottom: 2px solid #ddd; z-index: 1000; }
 .header-top { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
 .room-selector { flex: 1; padding: 12px; border-radius: 12px; border: 2px solid var(--olive); font-weight: bold; background: #fff; font-size: 1rem; }
-.btn-header-icon { background: var(--olive); color: white; border: none; padding: 10px; border-radius: 12px; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+.btn-header-icon { background: var(--olive); color: white; border: none; padding: 10px; border-radius: 12px; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: pointer; }
 .nav-bar { display: flex; background: #eee; padding: 4px; border-radius: 12px; gap: 4px; }
 .nav-tab { flex: 1; border: none; padding: 12px 5px; border-radius: 8px; font-weight: bold; color: #666; background: none; text-transform: uppercase; font-size: 0.7rem; }
 .nav-tab.active { background: white; color: var(--olive); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
 
-/* VIEWS */
 .view { flex: 1; display: none; overflow-y: auto; }
 .view.active { display: flex; flex-direction: column; }
 
-/* GARDEN */
+/* GARDEN VIEW */
 #canvas-container { flex: 1; background: #999; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; touch-action: none; }
 #garden-img { max-width: 100%; max-height: 100%; object-fit: contain; pointer-events: none; }
 .spot { position: absolute; transform: translate(-50%, -50%); border-radius: 15px; border: 3px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.3); background-size: cover; background-position: center; z-index: 500; cursor: grab; }
@@ -33,10 +32,6 @@ header { background: var(--white); padding: 10px; border-bottom: 2px solid #ddd;
 .card-main { display: flex; align-items: center; gap: 12px; width: 100%; }
 .card-thumb { width: 60px; height: 60px; border-radius: 10px; object-fit: cover; flex-shrink: 0; background: #eee; }
 .card-info { flex: 1; min-width: 0; }
-.card-info b { display: block; font-size: 1rem; margin-bottom: 2px; }
-.card-meta { font-size: 0.7rem; color: #777; margin-bottom: 5px; }
-
-/* METERS */
 .meter-row { margin-top: 4px; display: flex; align-items: center; gap: 8px; font-size: 0.7rem; font-weight: bold; }
 .meter-bg { flex: 1; height: 6px; background: #eee; border-radius: 3px; overflow: hidden; }
 .meter-fill { height: 100%; border-radius: 3px; transition: width 0.3s; }
@@ -44,32 +39,30 @@ header { background: var(--white); padding: 10px; border-bottom: 2px solid #ddd;
 .fill-water { background: linear-gradient(to right, #3498db, #2980b9); }
 
 /* SELECTORS */
-.selector-group { margin: 15px 0; }
-.selector-label { font-size: 0.75rem; font-weight: bold; margin-bottom: 8px; display: block; color: var(--dark); text-align: center; }
-.level-picker { display: flex; gap: 8px; }
-.level-btn { flex: 1; padding: 10px; border: 2px solid #eee; border-radius: 12px; background: #f9f9f9; cursor: pointer; font-size: 0.8rem; font-weight: bold; color: #888; text-align: center; }
+.selector-label { font-size: 0.75rem; font-weight: bold; margin-bottom: 8px; display: block; text-align: center; }
+.level-picker { display: flex; gap: 8px; margin-bottom: 10px; }
+.level-btn { flex: 1; padding: 10px; border: 2px solid #eee; border-radius: 12px; background: #f9f9f9; font-size: 0.8rem; font-weight: bold; text-align: center; color: #888; cursor: pointer; }
 .level-btn.active.light { background: #fff3cd; border-color: #ffc107; color: #856404; }
 .level-btn.active.water { background: #cfe2ff; border-color: #0d6efd; color: #084298; }
 
-/* HARVEST RATING */
+#guide-overlay { position: fixed; top: 20%; left: 50%; transform: translateX(-50%); background: var(--rust); color: white; padding: 15px 25px; border-radius: 20px; z-index: 2000; display: none; font-weight: bold; pointer-events: none; }
+.garden-tools { padding: 12px; background: white; border-top: 1px solid #ddd; display: flex; gap: 8px; padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
+.btn-quick { flex: 1; padding: 14px 5px; border: none; border-radius: 12px; font-weight: bold; color: white; font-size: 0.75rem; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; }
+.modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 5000; display: none; align-items: center; justify-content: center; padding: 15px; }
+.modal-content { background: white; width: 100%; max-width: 400px; padding: 20px; border-radius: 25px; max-height: 90vh; overflow-y: auto; }
+.btn-main { padding: 15px; border: none; border-radius: 15px; font-weight: bold; width: 100%; margin-top: 10px; font-size: 1rem; color: white; cursor: pointer; }
+input, select, textarea { width: 100%; padding: 12px; margin: 6px 0; border: 1px solid #ccc; border-radius: 10px; font-size: 1rem; }
+
 .rating-container { display: flex; justify-content: space-between; gap: 8px; margin: 10px 0; }
 .rate-num-btn { flex: 1; aspect-ratio: 1; border: 2px solid #ddd; border-radius: 12px; background: white; font-size: 1.2rem; font-weight: bold; color: #666; display: flex; align-items: center; justify-content: center; cursor: pointer; }
 .rate-num-btn.active { background: var(--gold); color: white; border-color: var(--gold); }
-
-/* TOOLS */
-.garden-tools { padding: 12px; background: white; border-top: 1px solid #ddd; display: flex; gap: 8px; padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
-.btn-quick { flex: 1; padding: 14px 5px; border: none; border-radius: 12px; font-weight: bold; font-size: 0.75rem; color: white; display: flex; flex-direction: column; align-items: center; gap: 4px; }
-.modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 5000; display: none; align-items: center; justify-content: center; padding: 15px; }
-.modal-content { background: white; width: 100%; max-width: 400px; padding: 20px; border-radius: 25px; max-height: 90vh; overflow-y: auto; }
-input, select, textarea { width: 100%; padding: 12px; margin: 6px 0; border: 1px solid #ccc; border-radius: 10px; font-size: 1rem; }
-.btn-main { padding: 15px; border: none; border-radius: 15px; font-weight: bold; width: 100%; margin-top: 10px; font-size: 1rem; color: white; }
 </style>
 </head>
 <body>
 
 <header>
     <div class="header-top">
-        <span style="font-size:1.2rem;"></span>
+        <span style="font-size:1.2rem;">🌿</span>
         <select id="roomSelector" class="room-selector" onchange="switchRoom(this.value)"></select>
         <button class="btn-header-icon" onclick="editRoomName()">EDIT</button>
     </div>
@@ -80,13 +73,15 @@ input, select, textarea { width: 100%; padding: 12px; margin: 6px 0; border: 1px
     </div>
 </header>
 
+<div id="guide-overlay">Tap photo to place plant</div>
+
 <div id="view-garden" class="view active">
-    <div id="canvas-container"></div>
+    <div id="canvas-container" onclick="handleCanvasClick(event)"></div>
     <div class="garden-tools">
-        <button class="btn-quick" style="background: var(--blue);" onclick="bulkLog('Watered')"><span></span>WATER</button>
-        <button class="btn-quick" style="background: var(--rust);" onclick="bulkLog('Fertilized')"><span></span>FERT.</button>
-        <button class="btn-quick" style="background: #cca43b;" onclick="openLightMeter()"><span></span>LIGHT</button>
-        <button class="btn-quick" style="background: var(--olive);" onclick="document.getElementById('bgInput').click()"><span></span>PHOTO</button>
+        <button class="btn-quick" style="background: var(--blue);" onclick="bulkLog('Watered')"><span>💧</span>WATER</button>
+        <button class="btn-quick" style="background: var(--rust);" onclick="bulkLog('Fertilized')"><span>🧪</span>FERT.</button>
+        <button class="btn-quick" style="background: #cca43b;" onclick="openLightMeter()"><span>☀️</span>LIGHT</button>
+        <button class="btn-quick" style="background: var(--olive);" onclick="document.getElementById('bgInput').click()"><span>📷</span>PHOTO</button>
         <input type="file" id="bgInput" hidden accept="image/*" onchange="uploadBg(this)">
     </div>
 </div>
@@ -100,8 +95,6 @@ input, select, textarea { width: 100%; padding: 12px; margin: 6px 0; border: 1px
     <div style="padding:15px;"><button class="btn-main" style="background:var(--green);" onclick="openHarvestModal()">+ LOG HARVEST</button></div>
     <div id="harvest-list"></div>
 </div>
-
-<div id="lightMeterModal" class="modal"><div class="modal-content"><h3 style="margin-top:0;text-align:center;">Light Meter </h3><div style="text-align:center;padding:20px;background:#f9f9f9;border-radius:15px;"><span id="lux-value" style="font-size:3rem;font-weight:bold;display:block;">0</span><span id="lux-label" style="color:var(--gold);font-weight:bold;">Waiting...</span></div><video id="light-video" autoplay playsinline style="width:100%;border-radius:15px;margin-top:10px;display:none;"></video><canvas id="light-canvas" style="display:none;"></canvas><button class="btn-main" style="background:var(--olive);" onclick="startLightMeter()">START</button><button class="btn-main" style="background:#eee;color:#333;" onclick="closeLightMeter()">CLOSE</button></div></div>
 
 <div id="plantModal" class="modal">
     <div class="modal-content">
@@ -129,7 +122,14 @@ input, select, textarea { width: 100%; padding: 12px; margin: 6px 0; border: 1px
         </div>
         
         <div style="display:flex;gap:10px;"><input type="date" id="plantDate"><select id="plantSize"><option value="small">Small</option><option value="medium" selected>Medium</option><option value="large">Large</option></select></div>
-        <textarea id="plantNotes" rows="3" placeholder="Notes..."></textarea>
+        <textarea id="plantNotes" rows="3" placeholder="Notes & Location history..."></textarea>
+        
+        <div id="moveSection" style="display:none; padding:10px; background:#f9f9f9; border-radius:15px; margin-top:10px; border:1px solid #ddd;">
+            <span class="selector-label" style="color:var(--rust)">MOVE TO ROOM:</span>
+            <select id="targetRoomSelect"></select>
+            <button class="btn-main" style="background:var(--rust)" onclick="startMovingPlant()">Move Here</button>
+        </div>
+
         <button class="btn-main" style="background:var(--green);" onclick="savePlant()">SAVE</button>
         <button id="deletePlantBtn" class="btn-main" style="background:none;color:var(--red);border:1px solid var(--red);" onclick="deletePlant()">Delete</button>
         <button class="btn-main" style="background:#eee;color:#333;" onclick="closeModal('plantModal')">Cancel</button>
@@ -138,15 +138,13 @@ input, select, textarea { width: 100%; padding: 12px; margin: 6px 0; border: 1px
 
 <div id="harvestModal" class="modal">
     <div class="modal-content">
-        <h3 id="hModalTitle" style="margin-top:0; text-align:center;">Harvest Log</h3>
-        <div id="hImgPreview" style="width:100%;height:150px;background:#f0f0f0;border-radius:15px;overflow:hidden;display:flex;align-items:center;justify-content:center;border:1px solid #ddd;"></div>
-        <button class="btn-main" style="background:#eee;color:#333;" onclick="document.getElementById('hImgInput').click()">Take Photo</button>
+        <h3 id="hModalTitle" style="margin:0; text-align:center;">Harvest Log</h3>
+        <div id="hImgPreview" style="width:100%;height:150px;background:#f0f0f0;border-radius:15px;overflow:hidden;display:flex;align-items:center;justify-content:center;margin:10px 0;"></div>
+        <button class="btn-main" style="background:#eee;color:#333;" onclick="document.getElementById('hImgInput').click()">Photo</button>
         <input type="file" id="hImgInput" hidden accept="image/*" onchange="previewHarvestImg(this)">
         <input type="text" id="hName" placeholder="What harvested?">
         <input type="text" id="hAmount" placeholder="Amount">
         <input type="date" id="hDate">
-        
-        <span class="selector-label">SCORE (1-5)</span>
         <div class="rating-container">
             <div class="rate-num-btn" data-v="1" onclick="setRateValue(1)">1</div>
             <div class="rate-num-btn" data-v="2" onclick="setRateValue(2)">2</div>
@@ -154,20 +152,20 @@ input, select, textarea { width: 100%; padding: 12px; margin: 6px 0; border: 1px
             <div class="rate-num-btn" data-v="4" onclick="setRateValue(4)">4</div>
             <div class="rate-num-btn" data-v="5" onclick="setRateValue(5)">5</div>
         </div>
-
-        <textarea id="hNotes" rows="3" placeholder="Notes..."></textarea>
         <button class="btn-main" style="background:var(--green);" onclick="saveHarvest()">SAVE</button>
-        <button id="deleteHarvestBtn" class="btn-main" style="background:none;color:var(--red);border:1px solid var(--red);display:none;" onclick="deleteHarvestConfirm()">Delete</button>
+        <button id="deleteHarvestBtn" class="btn-main" style="background:none;color:var(--red);border:1px solid var(--red); display:none;" onclick="deleteHarvest()">Delete</button>
         <button class="btn-main" style="background:#eee;color:#333;" onclick="closeModal('harvestModal')">Cancel</button>
     </div>
 </div>
 
+<div id="lightMeterModal" class="modal"><div class="modal-content"><h3 style="margin:0;text-align:center;">Light Meter ☀️</h3><div style="text-align:center;padding:20px;background:#f9f9f9;border-radius:15px;"><span id="lux-value" style="font-size:3rem;font-weight:bold;display:block;">0</span><span id="lux-label" style="color:var(--gold);font-weight:bold;">Waiting...</span></div><video id="light-video" autoplay playsinline style="width:100%;border-radius:15px;margin-top:10px;display:none;"></video><canvas id="light-canvas" style="display:none;"></canvas><button class="btn-main" style="background:var(--olive);" onclick="startLightMeter()">START</button><button class="btn-main" style="background:#eee;color:#333;" onclick="closeLightMeter()">CLOSE</button></div></div>
+
 <script>
 let db, state = { areas: [{id:1, name:"Room 1", img:null, spots:[]}], plants: [], harvestLog: [], activeAreaIdx: 0 };
-let currentPlantId = null, currentHarvestIdx = null, tempImgData = null, tempHImgData = null, selectedLight = 2, selectedWater = 2, currentRateVal = 5;
-let lightStream = null, lightInterval = null;
+let currentPlantId = null, currentHarvestIdx = null, isPlacingMode = false, selectedLight = 2, selectedWater = 2, currentRateVal = 5;
+let tempImgData = null, tempHImgData = null, lightStream = null, lightInterval = null;
 
-const dbReq = indexedDB.open("HubbeMasterDB_V23", 1);
+const dbReq = indexedDB.open("HubbePlantDB_V31", 1);
 dbReq.onupgradeneeded = e => { db = e.target.result; db.createObjectStore("data"); };
 dbReq.onsuccess = e => { db = e.target.result; loadData(); };
 
@@ -200,9 +198,31 @@ function renderAll() {
                 const s = p.size === 'small' ? 45 : p.size === 'large' ? 85 : 65;
                 div.className = 'spot'; div.style.width = s+'px'; div.style.height = s+'px'; div.style.backgroundImage = `url(${p.img})`;
                 const label = document.createElement('span'); label.className = 'spot-label'; label.innerText = p.name; div.appendChild(label);
-                const updatePos = (sx, sy) => { div.style.left = (r.left - c.left + (sx/100)*r.width) + 'px'; div.style.top = (r.top - c.top + (sy/100)*r.height) + 'px'; };
+                
+                const updatePos = (sx, sy) => { 
+                    div.style.left = (r.left - c.left + (sx/100)*r.width) + 'px'; 
+                    div.style.top = (r.top - c.top + (sy/100)*r.height) + 'px'; 
+                };
                 updatePos(spot.x, spot.y);
-                div.onclick = () => openPlantModal(p.id);
+
+                let isDragging = false;
+                const onDrag = (e) => {
+                    isDragging = true; e.preventDefault();
+                    const t = e.touches ? e.touches[0] : e;
+                    const rr = img.getBoundingClientRect();
+                    spot.x = Math.max(0, Math.min(100, ((t.clientX - rr.left) / rr.width) * 100));
+                    spot.y = Math.max(0, Math.min(100, ((t.clientY - rr.top) / rr.height) * 100));
+                    updatePos(spot.x, spot.y);
+                };
+                const stopDrag = () => {
+                    window.removeEventListener('mousemove', onDrag); window.removeEventListener('touchmove', onDrag);
+                    if(isDragging) saveData();
+                    setTimeout(() => isDragging = false, 100);
+                };
+                div.addEventListener('mousedown', e => { e.stopPropagation(); window.addEventListener('mousemove', onDrag); window.addEventListener('mouseup', stopDrag, {once:true}); });
+                div.addEventListener('touchstart', e => { e.stopPropagation(); window.addEventListener('touchmove', onDrag, {passive: false}); window.addEventListener('touchend', stopDrag, {once:true}); }, {passive: false});
+                
+                div.onclick = (e) => { e.stopPropagation(); if (!isDragging) openPlantModal(p.id); };
                 container.appendChild(div);
             });
         };
@@ -211,63 +231,116 @@ function renderAll() {
     // LIBRARY
     document.getElementById('plant-list').innerHTML = state.plants.map(p => {
         let loc = "Unplaced"; state.areas.forEach(a => { if(a.spots.find(s => s.plantId === p.id)) loc = a.name; });
-        return `<div class="item-card" onclick="openPlantModal(${p.id})"><div class="card-main"><img src="${p.img}" class="card-thumb"><div class="card-info"><b>${p.name}</b><div class="card-meta"> ${loc} | ${p.date || ''}</div><div class="meter-row"> <div class="meter-bg"><div class="meter-fill fill-light" style="width:${(p.light/3)*100}%"></div></div></div><div class="meter-row"> <div class="meter-bg"><div class="meter-fill fill-water" style="width:${(p.water/3)*100}%"></div></div></div></div><div style="font-weight:bold;color:var(--gold);font-size:0.7rem;">${(p.size||'m').toUpperCase()}</div></div></div>`;
+        return `<div class="item-card" onclick="openPlantModal(${p.id})"><div class="card-main"><img src="${p.img}" class="card-thumb"><div class="card-info"><b>${p.name}</b><div class="card-meta">📍 ${loc}</div><div class="meter-row">☀️ <div class="meter-bg"><div class="meter-fill fill-light" style="width:${(p.light/3)*100}%"></div></div></div><div class="meter-row">💧 <div class="meter-bg"><div class="meter-fill fill-water" style="width:${(p.water/3)*100}%"></div></div></div></div><div style="font-weight:bold;color:var(--gold);">${(p.size||'m').toUpperCase()}</div></div></div>`;
     }).join('');
 
     // HARVEST
     document.getElementById('harvest-list').innerHTML = (state.harvestLog || []).map((h, i) => `
         <div class="item-card" onclick="openHarvestModal(${i})">
-            <div class="card-main"><img src="${h.img || ''}" class="card-thumb"><div class="card-info"><div style="display:flex;justify-content:space-between;"><b>${h.name}</b><span style="color:var(--gold);"> ${h.score}/5</span></div><small>${h.date} &bull; ${h.amount}</small></div></div>
-            ${h.notes ? `<div class="harvest-note-preview">${h.notes}</div>` : ''}
+            <div class="card-main"><img src="${h.img}" class="card-thumb"><div class="card-info"><div style="display:flex; justify-content:space-between;"><b>${h.name}</b><span style="color:var(--gold);">★ ${h.score}/5</span></div><small>${h.date} &bull; ${h.amount}</small></div></div>
         </div>`).join('');
 }
 
-function setPicker(type, val) {
-    if (type === 'light') { selectedLight = val; document.querySelectorAll('.level-btn.light').forEach(b => b.classList.toggle('active', parseInt(b.dataset.v) === val)); }
-    else { selectedWater = val; document.querySelectorAll('.level-btn.water').forEach(b => b.classList.toggle('active', parseInt(b.dataset.v) === val)); }
+function startMovingPlant() {
+    const targetIdx = parseInt(document.getElementById('targetRoomSelect').value);
+    const plant = state.plants.find(p => p.id === currentPlantId);
+    
+    // Find current room name
+    let prevRoom = "Unknown";
+    state.areas.forEach(a => {
+        if (a.spots.find(s => s.plantId === currentPlantId)) prevRoom = a.name;
+    });
+
+    // Add history entry to notes
+    const time = new Date().toLocaleDateString();
+    const historyEntry = `📍 Prev Location: ${prevRoom} (${time})\n`;
+    plant.notes = historyEntry + (plant.notes || "");
+
+    // Prepare for move
+    state.areas.forEach(a => a.spots = a.spots.filter(s => s.plantId !== currentPlantId));
+    state.activeAreaIdx = targetIdx;
+    isPlacingMode = true;
+    closeModal('plantModal');
+    showView('garden');
+    document.getElementById('guide-overlay').style.display = 'block';
 }
-function setRateValue(val) { currentRateVal = val; document.querySelectorAll('.rate-num-btn').forEach(b => b.classList.toggle('active', parseInt(b.dataset.v) === val)); }
+
+function handleCanvasClick(e) {
+    if (!isPlacingMode || !currentPlantId) return;
+    const img = document.getElementById('garden-img'); if (!img) return;
+    const r = img.getBoundingClientRect();
+    const x = ((e.clientX - r.left) / r.width) * 100;
+    const y = ((e.clientY - r.top) / r.height) * 100;
+    if (x >= 0 && x <= 100 && y >= 0 && y <= 100) {
+        state.areas[state.activeAreaIdx].spots.push({ plantId: currentPlantId, x, y });
+        isPlacingMode = false;
+        document.getElementById('guide-overlay').style.display = 'none';
+        saveData();
+    }
+}
+
+function editRoomName() {
+    const newName = prompt("Rename room:", state.areas[state.activeAreaIdx].name);
+    if (newName) { state.areas[state.activeAreaIdx].name = newName; saveData(); }
+}
 
 function openPlantModal(id = null) {
     currentPlantId = id; tempImgData = null; const p = id ? state.plants.find(x => x.id === id) : null;
-    document.getElementById('plantName').value = p ? p.name : ""; document.getElementById('plantNotes').value = p ? p.notes || "" : "";
-    document.getElementById('plantDate').value = p ? p.date || "" : ""; document.getElementById('plantSize').value = p ? p.size || "medium" : "medium";
+    document.getElementById('plantName').value = p ? p.name : "";
+    document.getElementById('plantDate').value = p ? p.date || "" : "";
+    document.getElementById('plantNotes').value = p ? p.notes || "" : "";
     document.getElementById('imgPreviewArea').innerHTML = p ? `<img src="${p.img}" style="width:100%;height:100%;object-fit:cover;">` : "Select Image";
     setPicker('light', p ? p.light : 2); setPicker('water', p ? p.water : 2);
     document.getElementById('deletePlantBtn').style.display = p ? "block" : "none";
+    const ms = document.getElementById('moveSection');
+    if (p) {
+        ms.style.display = "block";
+        document.getElementById('targetRoomSelect').innerHTML = state.areas.map((a, i) => `<option value="${i}">${a.name}</option>`).join('');
+    } else ms.style.display = "none";
     document.getElementById('plantModal').style.display = 'flex';
 }
 
-function openHarvestModal(idx = null) {
-    currentHarvestIdx = idx; tempHImgData = null; const h = idx !== null ? state.harvestLog[idx] : null;
-    document.getElementById('hName').value = h ? h.name : ""; document.getElementById('hAmount').value = h ? h.amount : "";
-    document.getElementById('hDate').value = h ? h.date : new Date().toISOString().split('T')[0];
-    document.getElementById('hNotes').value = h ? h.notes || "" : "";
-    document.getElementById('deleteHarvestBtn').style.display = h ? "block" : "none";
-    setRateValue(h ? h.score : 5);
-    document.getElementById('hImgPreview').innerHTML = h && h.img ? `<img src="${h.img}" style="width:100%;height:100%;object-fit:cover;">` : "Photo";
-    document.getElementById('harvestModal').style.display = 'flex';
-}
-
 function savePlant() {
-    const n = document.getElementById('plantName').value; if (!n) return alert("Name!");
+    const n = document.getElementById('plantName').value;
     const img = tempImgData || (currentPlantId ? state.plants.find(p => p.id === currentPlantId).img : null);
+    if (!n || !img) return alert("Info required!");
     const pObj = { id: currentPlantId || Date.now(), name: n, img, light: selectedLight, water: selectedWater, date: document.getElementById('plantDate').value, notes: document.getElementById('plantNotes').value, size: document.getElementById('plantSize').value };
     if (currentPlantId) state.plants[state.plants.findIndex(x => x.id === currentPlantId)] = pObj; else state.plants.push(pObj);
     closeModal('plantModal'); saveData();
 }
 
+function openHarvestModal(idx = null) {
+    currentHarvestIdx = idx; tempHImgData = null; const h = idx !== null ? state.harvestLog[idx] : null;
+    document.getElementById('hModalTitle').innerText = h ? "Update Harvest" : "Log Harvest";
+    document.getElementById('hName').value = h ? h.name : ""; 
+    document.getElementById('hAmount').value = h ? h.amount : "";
+    document.getElementById('hDate').value = h ? h.date : new Date().toISOString().split('T')[0];
+    setRateValue(h ? h.score : 5);
+    document.getElementById('hImgPreview').innerHTML = h && h.img ? `<img src="${h.img}" style="width:100%;height:100%;object-fit:cover;">` : "Photo";
+    document.getElementById('deleteHarvestBtn').style.display = h ? "block" : "none";
+    document.getElementById('harvestModal').style.display = 'flex';
+}
+
 function saveHarvest() {
-    const n = document.getElementById('hName').value; if (!n) return alert("Name!");
-    const hObj = { name: n, amount: document.getElementById('hAmount').value, date: document.getElementById('hDate').value, notes: document.getElementById('hNotes').value, score: currentRateVal, img: tempHImgData || (currentHarvestIdx !== null ? state.harvestLog[currentHarvestIdx].img : null) };
-    if (currentHarvestIdx !== null) state.harvestLog[currentHarvestIdx] = hObj; else state.harvestLog.unshift(hObj);
+    const n = document.getElementById('hName').value; 
+    const img = tempHImgData || (currentHarvestIdx !== null ? state.harvestLog[currentHarvestIdx].img : null);
+    if (!n || !img) return alert("Info required!");
+    const hObj = { name: n, amount: document.getElementById('hAmount').value, date: document.getElementById('hDate').value, score: currentRateVal, img };
+    if (currentHarvestIdx !== null) state.harvestLog[currentHarvestIdx] = hObj;
+    else state.harvestLog.unshift(hObj);
     closeModal('harvestModal'); saveData();
 }
 
+function deleteHarvest() {
+    if(confirm("Delete harvest?")) { state.harvestLog.splice(currentHarvestIdx, 1); closeModal('harvestModal'); saveData(); }
+}
+
+function setPicker(type, val) { if (type === 'light') { selectedLight = val; document.querySelectorAll('.level-btn.light').forEach(b => b.classList.toggle('active', parseInt(b.dataset.v) === val)); } else { selectedWater = val; document.querySelectorAll('.level-btn.water').forEach(b => b.classList.toggle('active', parseInt(b.dataset.v) === val)); } }
+function setRateValue(val) { currentRateVal = val; document.querySelectorAll('.rate-num-btn').forEach(b => b.classList.toggle('active', parseInt(b.dataset.v) === val)); }
 function showView(v) { document.querySelectorAll('.view').forEach(el => el.classList.remove('active')); document.getElementById('view-' + v).classList.add('active'); document.querySelectorAll('.nav-tab').forEach(t => t.classList.toggle('active', t.id === 'nav-' + v)); if(v === 'garden') setTimeout(renderAll, 50); }
 function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 function switchRoom(v) { if (v === 'ADD') { const n = prompt("Name?"); if (n) { state.areas.push({id: Date.now(), name: n, img: null, spots: []}); state.activeAreaIdx = state.areas.length - 1; } } else state.activeAreaIdx = parseInt(v); saveData(); }
-function bulkLog(t) { const area = state.areas[state.activeAreaIdx]; if (area.spots.length === 0) return; if (confirm("Log " + t + " for ALL?")) { area.spots.forEach(s => { const p = state.plants.find(x => x.id === s.plantId); if (p) p.notes = t + " " + new Date().toLocaleDateString() + "\n" + (p.notes || ""); }); saveData(); } }
+function bulkLog(t) { const area = state.areas[state.activeAreaIdx]; if (confirm("Log " + t + " for ALL?")) { area.spots.forEach(s => { const p = state.plants.find(x => x.id === s.plantId); if (p) p.notes = t + " " + new Date().toLocaleDateString() + "\n" + (p.notes || ""); }); saveData(); } }
 async function uploadBg(i) { if (i.files[0]) { state.areas[state.activeAreaIdx].img = await resizeImg(i.files[0], 1000); saveData(); } }
 async function previewPlantImg(i) { if (i.files[0]) { tempImgData = await resizeImg(i.files[0], 600); document.getElementById('imgPreviewArea').innerHTML = `<img src="${tempImgData}" style="width:100%;height:100%;object-fit:cover;">`; } }
 async function previewHarvestImg(i) { if (i.files[0]) { tempHImgData = await resizeImg(i.files[0], 600); document.getElementById('hImgPreview').innerHTML = `<img src="${tempHImgData}" style="width:100%;height:100%;object-fit:cover;">`; } }
@@ -275,6 +348,7 @@ function resizeImg(f, max) { return new Promise(r => { const rd = new FileReader
 function openLightMeter() { document.getElementById('lightMeterModal').style.display = 'flex'; }
 function closeLightMeter() { if (lightStream) lightStream.getTracks().forEach(t => t.stop()); clearInterval(lightInterval); document.getElementById('light-video').style.display='none'; document.getElementById('lightMeterModal').style.display='none'; }
 async function startLightMeter() { try { const video = document.getElementById('light-video'); video.style.display = 'block'; lightStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } }); video.srcObject = lightStream; const canvas = document.getElementById('light-canvas'); const ctx = canvas.getContext('2d'); lightInterval = setInterval(() => { if (video.readyState === video.HAVE_ENOUGH_DATA) { canvas.width = 100; canvas.height = 100; ctx.drawImage(video, 0, 0, 100, 100); const d = ctx.getImageData(0,0,100,100).data; let b = 0; for (let i = 0; i < d.length; i+=4) b += (d[i] + d[i+1] + d[i+2]) / 3; const val = Math.round(b / (d.length/4)); document.getElementById('lux-value').innerText = val; document.getElementById('lux-label').innerText = val < 50 ? "LOW" : val < 160 ? "MEDIUM" : "HIGH"; } }, 500); } catch (e) { alert("Camera access needed!"); } }
+function deletePlant() { if(confirm("Delete?")) { state.plants = state.plants.filter(p => p.id !== currentPlantId); state.areas.forEach(a => a.spots = a.spots.filter(s => s.plantId !== currentPlantId)); closeModal('plantModal'); saveData(); } }
 </script>
 </body>
 </html>
