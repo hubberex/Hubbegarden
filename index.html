@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>Hubbe Pro: Lockdown Build v2.7</title>
+<title>Hubbe Pro: Lockdown Build v2.8</title>
 <style>
 :root { 
     --olive: #606C38; --dark: #283618; --cream: #FEFAE0; --rust: #BC6C25; 
@@ -112,6 +112,7 @@ header { background: var(--white); padding: 12px; border-bottom: 1px solid #ddd;
         <div class="setup-toolbar" style="position: absolute; bottom: 12px; left: 12px; display: flex; gap: 10px; z-index:900;">
             <button class="overlay-btn" onclick="document.getElementById('bgIn').click()">📷 PHOTO</button>
             <button class="overlay-btn" onclick="togGrid()"># GRID</button>
+            <button class="overlay-btn" onclick="startLightMeter()">☀️ METER</button>
         </div>
 
         <input type="file" id="bgIn" hidden accept="image/*" onchange="handleFile(this, 'room')">
@@ -134,6 +135,18 @@ header { background: var(--white); padding: 12px; border-bottom: 1px solid #ddd;
     <div style="padding:15px;"><button class="btn-compact" style="background:var(--gold); color:white;" onclick="openHMod(null)">+ LOG NEW HARVEST</button></div>
     <div id="h-list"></div>
 </div>
+
+<div id="lightModal" class="modal" onclick="checkClose(event, 'lightModal')"><div class="modal-content" style="text-align: center;">
+    <h3 style="margin-top:0; color:var(--olive);">Light Meter</h3>
+    <p style="font-size:0.8rem; color:#666;">Point your camera at the grid cell.</p>
+    <div style="position:relative; width:100%; height:250px; background:#000; border-radius:18px; overflow:hidden; margin-bottom:15px;">
+        <video id="cameraFeed" autoplay playsinline style="width:100%; height:100%; object-fit:cover;"></video>
+    </div>
+    <h1 id="lightScore" style="margin:10px 0; color:var(--gold);">Calculating...</h1>
+    <p id="lightDesc" style="font-size:0.9rem; font-weight:bold; color:#555;">...</p>
+    <canvas id="lightCanvas" style="display:none;"></canvas>
+    <button class="btn-compact" style="background:#eee; color:#333;" onclick="stopLightMeter()">CLOSE METER</button>
+</div></div>
 
 <div id="pModal" class="modal" onclick="checkClose(event, 'pModal')"><div class="modal-content">
     <div id="pPrev" style="width:100%;height:160px;background:#f8f8f8;border-radius:20px;display:flex;align-items:center;justify-content:center;overflow:hidden;border:2px dashed #ddd;" onclick="previewCover()">No Photo</div>
@@ -213,6 +226,7 @@ header { background: var(--white); padding: 12px; border-bottom: 1px solid #ddd;
     <p>3. Add plants in LIBRARY.</p>
     <p>4. Tap PLACE IN GARDEN to pin to the room.</p>
     <p>5. Log yields in the HARVEST tab.</p>
+    <p>6. Use ☀️ METER to scan for light levels.</p>
     <button class="btn-compact" style="background:var(--olive); color:white;" onclick="closeMod('helpModal')">GOT IT!</button>
 </div></div>
 
@@ -241,6 +255,10 @@ let currentPlantID = null, currentHarvestID = null, flowActive = false, calActiv
 let curSun = 'med', curWater = 'med';
 
 let selectedColor = "rgba(45, 106, 79, 0.7)", selectedRGB = "45, 106, 79", selectedAlpha = 0.7;
+
+// --- NEW LIGHT METER VARIABLES ---
+let cameraStream = null;
+let lightLoopId = null;
 
 const dbReq = indexedDB.open("HubbePlantDB_LOCKDOWN_V2", 1);
 dbReq.onupgradeneeded = e => { db = e.target.result; db.createObjectStore("data"); };
@@ -494,6 +512,97 @@ function importData(input) {
         } catch(err) { alert("Invalid backup file."); }
     };
     reader.readAsText(input.files[0]);
+}
+
+// --- NEW LIGHT METER FUNCTIONS ---
+
+function startLightMeter() {
+    openMod('lightModal');
+    const video = document.getElementById('cameraFeed');
+    
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+            .then(stream => {
+                cameraStream = stream;
+                video.srcObject = stream;
+                video.onloadedmetadata = () => {
+                    video.play();
+                    processLightFrame();
+                };
+            })
+            .catch(err => {
+                document.getElementById('lightScore').innerText = "Camera Error";
+                document.getElementById('lightDesc').innerText = "Could not access the camera.";
+                console.error("Error accessing camera: ", err);
+            });
+    } else {
+        document.getElementById('lightScore').innerText = "Not Supported";
+        document.getElementById('lightDesc').innerText = "Your browser does not support camera access.";
+    }
+}
+
+function processLightFrame() {
+    const video = document.getElementById('cameraFeed');
+    const canvas = document.getElementById('lightCanvas');
+    
+    if (!video.videoWidth) {
+        lightLoopId = requestAnimationFrame(processLightFrame);
+        return;
+    }
+    
+    // Scale down massively for performance. We just need the average color.
+    canvas.width = 64; 
+    canvas.height = 64;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    
+    const frameData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = frameData.data;
+    
+    let totalLuminance = 0;
+    const pixelCount = data.length / 4;
+    
+    for (let i = 0; i < data.length; i += 4) {
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+        
+        // Luminance math Y = 0.299R + 0.587G + 0.114B
+        const luminance = (0.299 * r) + (0.587 * g) + (0.114 * b);
+        totalLuminance += luminance;
+    }
+    
+    const avgLuminance = totalLuminance / pixelCount;
+    const scoreEl = document.getElementById('lightScore');
+    const descEl = document.getElementById('lightDesc');
+    
+    let displayScore = Math.round(avgLuminance);
+    scoreEl.innerText = displayScore + " LUX (est)";
+    
+    if (avgLuminance > 160) {
+        descEl.innerText = "☀️ Full Sun (High)";
+        descEl.style.color = "var(--gold)";
+    } else if (avgLuminance > 80) {
+        descEl.innerText = "⛅ Part Sun (Medium)";
+        descEl.style.color = "var(--blue)";
+    } else {
+        descEl.innerText = "☁️ Low Light (Low)";
+        descEl.style.color = "var(--gray)";
+    }
+    
+    lightLoopId = requestAnimationFrame(processLightFrame);
+}
+
+function stopLightMeter() {
+    if (lightLoopId) {
+        cancelAnimationFrame(lightLoopId);
+        lightLoopId = null;
+    }
+    if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+        cameraStream = null;
+    }
+    closeMod('lightModal');
 }
 
 document.querySelectorAll('.anchor').forEach(a => {
