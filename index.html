@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>Hubbe Pro: Lockdown Build v2.5</title>
+<title>Hubbe Pro: Lockdown Build v2.7</title>
 <style>
 :root { 
     --olive: #606C38; --dark: #283618; --cream: #FEFAE0; --rust: #BC6C25; 
@@ -67,6 +67,20 @@ header { background: var(--white); padding: 12px; border-bottom: 1px solid #ddd;
 .color-row { display: flex; justify-content: space-between; margin: 10px 0; gap: 10px; }
 .color-dot { width: 44px; height: 44px; border-radius: 50%; border: 3px solid #eee; cursor: pointer; transition: 0.2s; }
 .color-dot.active { border-color: #333 !important; transform: scale(1.15); box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
+
+/* Requirements Styling */
+.req-row { display: flex; gap: 10px; margin-top: 6px; }
+.req-btn { flex: 1; border: 2px solid #eee; background: white; border-radius: 12px; padding: 8px; font-size: 1.2rem; cursor: pointer; transition: 0.2s; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.req-btn span { font-size: 0.6rem; font-weight: 800; color: #888; text-transform: uppercase; }
+.req-btn.active { border-color: var(--olive); background: var(--cream); }
+.req-btn.active[data-type="sun"] { border-color: var(--gold); background: #fffdf0; }
+.req-btn.active[data-type="water"] { border-color: var(--blue); background: #f0f7ff; }
+
+/* Badge Styling */
+.card-meta { display: flex; gap: 8px; margin-top: 4px; align-items: center; }
+.badge { font-size: 0.6rem; font-weight: 800; padding: 2px 6px; border-radius: 6px; display: flex; align-items: center; gap: 3px; }
+.badge-sun { background: #fffdf0; color: #b08d00; border: 1px solid #ffeaa7; }
+.badge-water { background: #f0f7ff; color: #2b6a94; border: 1px solid #d1e9ff; }
 </style>
 </head>
 <body>
@@ -76,10 +90,10 @@ header { background: var(--white); padding: 12px; border-bottom: 1px solid #ddd;
         <div class="logo">H</div>
         <div class="room-controls">
             <select id="roomSelector" class="room-selector" onchange="roomSwitch(this.value)"></select>
-            <button class="room-btn" onclick="renameRoom()"></button>
-            <button class="room-btn" onclick="deleteRoom()" style="color:var(--red);"></button>
+            <button class="room-btn" onclick="renameRoom()">✏️</button>
+            <button class="room-btn" onclick="deleteRoom()" style="color:var(--red);">🗑️</button>
         </div>
-        <button class="room-btn" onclick="openMod('settingsModal')"></button>
+        <button class="room-btn" onclick="openMod('settingsModal')">⚙️</button>
     </div>
     <div class="nav-bar">
         <button id="nav-garden" class="nav-tab active" onclick="showV('garden')">GARDEN</button>
@@ -90,15 +104,15 @@ header { background: var(--white); padding: 12px; border-bottom: 1px solid #ddd;
 
 <div id="view-garden" class="view active">
     <div class="care-toolbar">
-        <button class="care-btn" style="background:var(--blue);" onclick="roomCare('Watered')"> WATER</button>
-        <button class="care-btn" style="background:var(--purple);" onclick="roomCare('Fertilized')"> FERT</button>
-        <button class="care-btn" style="background:var(--rust);" onclick="openMod('helpModal')"> HELP</button>
+        <button class="care-btn" style="background:var(--blue);" onclick="roomCare('Watered')">💧 WATER</button>
+        <button class="care-btn" style="background:var(--purple);" onclick="roomCare('Fertilized')">🧪 FERT</button>
+        <button class="care-btn" style="background:var(--rust);" onclick="openMod('helpModal')">❓ HELP</button>
     </div>
     <div id="canvas-container" onclick="handleGridClick(event)">
         <img id="garden-img" src="" style="display:none;">
         
         <div class="setup-toolbar" style="position: absolute; bottom: 12px; left: 12px; display: flex; gap: 10px; z-index:900;">
-            <button class="overlay-btn" onclick="document.getElementById('bgIn').click()"> PHOTO</button>
+            <button class="overlay-btn" onclick="document.getElementById('bgIn').click()">📷 PHOTO</button>
             <button class="overlay-btn" onclick="togGrid()"># GRID</button>
         </div>
 
@@ -108,7 +122,7 @@ header { background: var(--white); padding: 12px; border-bottom: 1px solid #ddd;
         <div id="anchor-tr" class="anchor" data-id="tr"></div>
         <div id="anchor-bl" class="anchor" data-id="bl"></div>
         <div id="anchor-br" class="anchor" data-id="br"></div>
-        <button id="cal-done-float" onclick="stopCal()"></button>
+        <button id="cal-done-float" onclick="stopCal()">✓</button>
     </div>
     <div id="garden-card-list"></div>
 </div>
@@ -128,15 +142,31 @@ header { background: var(--white); padding: 12px; border-bottom: 1px solid #ddd;
     <button class="btn-compact" style="background:var(--blue); color:white;" onclick="document.getElementById('pIn').click()">CHANGE COVER</button>
     <input type="file" id="pIn" hidden accept="image/*" onchange="handleFile(this, 'plant')">
     <label class="field-label">NAME</label><input type="text" id="pName" class="h-input" placeholder="e.g. Tomato Row 1">
+    
+    <label class="field-label">SUN NEED</label>
+    <div class="req-row">
+        <button class="req-btn" data-type="sun" data-val="low" onclick="setReq('sun', 'low')">☁️<span>Low</span></button>
+        <button class="req-btn" data-type="sun" data-val="med" onclick="setReq('sun', 'med')">⛅<span>Part</span></button>
+        <button class="req-btn" data-type="sun" data-val="high" onclick="setReq('sun', 'high')">☀️<span>Full</span></button>
+    </div>
+
+    <label class="field-label">WATER NEED</label>
+    <div class="req-row">
+        <button class="req-btn" data-type="water" data-val="low" onclick="setReq('water', 'low')">🌵<span>Rare</span></button>
+        <button class="req-btn" data-type="water" data-val="med" onclick="setReq('water', 'med')">💧<span>Weekly</span></button>
+        <button class="req-btn" data-type="water" data-val="high" onclick="setReq('water', 'high')">🌊<span>Daily</span></button>
+    </div>
+
     <label class="field-label">CARE LOG / HISTORY</label><textarea id="pNotes" class="h-input" style="height:100px; resize:none;"></textarea>
     
     <label class="field-label">COLOR & OPACITY</label>
     <div class="color-row">
-        <div class="color-dot" data-rgb="45, 106, 79" onclick="setPlantColor(this)"></div>
-        <div class="color-dot" data-rgb="43, 106, 148" onclick="setPlantColor(this)"></div>
-        <div class="color-dot" data-rgb="188, 108, 37" onclick="setPlantColor(this)"></div>
-        <div class="color-dot" data-rgb="174, 32, 18" onclick="setPlantColor(this)"></div>
+        <div class="color-dot" data-rgb="45, 106, 79" style="background:rgba(45, 106, 79, 0.7);" onclick="setPlantColor(this)"></div>
+        <div class="color-dot" data-rgb="43, 106, 148" style="background:rgba(43, 106, 148, 0.7);" onclick="setPlantColor(this)"></div>
+        <div class="color-dot" data-rgb="188, 108, 37" style="background:rgba(188, 108, 37, 0.7);" onclick="setPlantColor(this)"></div>
+        <div class="color-dot" data-rgb="174, 32, 18" style="background:rgba(174, 32, 18, 0.7);" onclick="setPlantColor(this)"></div>
     </div>
+    
     <div style="display:flex; align-items:center; gap:10px; margin-top:5px; margin-bottom: 15px;">
         <span style="font-size:0.65rem; font-weight:800; color:#888;">FAINT</span>
         <input type="range" id="pOpacity" min="0.1" max="1" step="0.05" style="flex:1; accent-color: var(--olive);" oninput="updateOpacity(this.value)">
@@ -149,7 +179,7 @@ header { background: var(--white); padding: 12px; border-bottom: 1px solid #ddd;
     <input type="file" id="progIn" hidden accept="image/*" onchange="addTimelinePhoto(this)">
 
     <div id="garden-actions-wrap" style="display:none; margin-top:10px;"><button class="btn-compact" style="background:var(--rust); color:white;" onclick="removeFromGarden()">REMOVE FROM ROOM</button></div>
-    <div id="flow-btn-wrap" style="display:none;"><button class="btn-compact" style="background:var(--blue); color:white;" onclick="enterFlow()"> PLACE IN GARDEN</button></div>
+    <div id="flow-btn-wrap" style="display:none;"><button class="btn-compact" style="background:var(--blue); color:white;" onclick="enterFlow()">✨ PLACE IN GARDEN</button></div>
     
     <button class="btn-compact" style="background:var(--green); color:white;" onclick="saveP()">SAVE ALL</button>
     <button id="pDelBtn" class="btn-compact" style="background:none; color:var(--red); border:2px solid var(--red); display:none;" onclick="deletePlant()">DELETE PLANT</button>
@@ -165,11 +195,11 @@ header { background: var(--white); padding: 12px; border-bottom: 1px solid #ddd;
     <label class="field-label">AMOUNT</label><input type="text" id="hAmount" class="h-input" placeholder="e.g. 500g, 2 baskets">
     <label class="field-label">SATISFACTION</label>
     <div class="star-row" style="display:flex; gap:10px; justify-content:center; margin:10px 0;">
-        <span class="star" data-v="1" onclick="setStar(1)" style="font-size:2rem; cursor:pointer; color:#ddd;"></span>
-        <span class="star" data-v="2" onclick="setStar(2)" style="font-size:2rem; cursor:pointer; color:#ddd;"></span>
-        <span class="star" data-v="3" onclick="setStar(3)" style="font-size:2rem; cursor:pointer; color:#ddd;"></span>
-        <span class="star" data-v="4" onclick="setStar(4)" style="font-size:2rem; cursor:pointer; color:#ddd;"></span>
-        <span class="star" data-v="5" onclick="setStar(5)" style="font-size:2rem; cursor:pointer; color:#ddd;"></span>
+        <span class="star" data-v="1" onclick="setStar(1)" style="font-size:2rem; cursor:pointer; color:#ddd;">★</span>
+        <span class="star" data-v="2" onclick="setStar(2)" style="font-size:2rem; cursor:pointer; color:#ddd;">★</span>
+        <span class="star" data-v="3" onclick="setStar(3)" style="font-size:2rem; cursor:pointer; color:#ddd;">★</span>
+        <span class="star" data-v="4" onclick="setStar(4)" style="font-size:2rem; cursor:pointer; color:#ddd;">★</span>
+        <span class="star" data-v="5" onclick="setStar(5)" style="font-size:2rem; cursor:pointer; color:#ddd;">★</span>
     </div>
     <button class="btn-compact" style="background:var(--green); color:white;" onclick="saveHarvest()">SAVE</button>
     <button id="hDelBtn" class="btn-compact" style="background:none; color:var(--red); border:2px solid var(--red); display:none;" onclick="deleteHarvest()">DELETE</button>
@@ -199,9 +229,9 @@ header { background: var(--white); padding: 12px; border-bottom: 1px solid #ddd;
 
 <script>
 let db, state = { areas: [{id:1, name:"Garden 1", img:null, spots:[], grid: {active:false, rows:4, cols:3, tl:{x:10,y:10}, tr:{x:90,y:10}, bl:{x:10,y:90}, br:{x:90,y:90}}}], plants: [], harvests: [], activeIdx: 0 };
-
-// NEW: Separated selectedColor into raw RGB and Alpha for the slider
 let currentPlantID = null, currentHarvestID = null, flowActive = false, calActive = false, pendingPImg = null, pendingHImg = null, selHRating = 0, currentTimeline = [];
+let curSun = 'med', curWater = 'med';
+
 let selectedColor = "rgba(45, 106, 79, 0.7)", selectedRGB = "45, 106, 79", selectedAlpha = 0.7;
 
 const dbReq = indexedDB.open("HubbePlantDB_LOCKDOWN_V2", 1);
@@ -216,6 +246,15 @@ const lerp = (a, b, t) => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t 
 const getGridPoint = (grid, u, v) => lerp(lerp(grid.tl, grid.tr, u), lerp(grid.bl, grid.br, u), v);
 
 function checkClose(e, id) { if(e.target.id === id) closeMod(id); }
+
+function setReq(type, val) {
+    if(type === 'sun') curSun = val;
+    if(type === 'water') curWater = val;
+    
+    document.querySelectorAll(`.req-btn[data-type="${type}"]`).forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.val === val);
+    });
+}
 
 function render() {
     const area = state.areas[state.activeIdx];
@@ -243,7 +282,9 @@ function render() {
                 
                 const d = document.createElement('div'); d.className = 'spot';
                 d.style.left = '0px'; d.style.top = '0px'; d.style.width = c.width+'px'; d.style.height = c.height+'px';
+                
                 d.style.background = p.color || "rgba(45, 106, 79, 0.7)"; 
+                
                 d.style.clipPath = `polygon(${pts[0].x}px ${pts[0].y}px, ${pts[1].x}px ${pts[1].y}px, ${pts[2].x}px ${pts[2].y}px, ${pts[3].x}px ${pts[3].y}px)`;
                 
                 const lbl = document.createElement('span'); lbl.className = 'spot-label'; 
@@ -263,18 +304,56 @@ function render() {
 }
 
 function renderLists(area) {
+    const getIcon = (type, val) => {
+        const icons = {
+            sun: { low: '☁️', med: '⛅', high: '☀️' },
+            water: { low: '🌵', med: '💧', high: '🌊' }
+        };
+        return icons[type][val] || icons[type]['med'];
+    };
+
+    const getBadges = (p) => `
+        <div class="card-meta">
+            <span class="badge badge-sun">${getIcon('sun', p.sun)} ${p.sun?.toUpperCase() || 'MED'}</span>
+            <span class="badge badge-water">${getIcon('water', p.water)} ${p.water?.toUpperCase() || 'MED'}</span>
+        </div>
+    `;
+
     document.getElementById('garden-card-list').innerHTML = [...new Set(area.spots.map(s => s.pId))].map(pid => {
         const p = state.plants.find(x => x.id === pid); const s = area.spots.find(x => x.pId === pid);
-        return `<div class="item-card" onclick="openPMod(${p.id})"><img src="${p.img || ''}" class="card-thumb"><div style="flex:1;"><b>${p.name}</b><br><small>Position: D${s.r+1} W${s.c+1}</small></div></div>`;
+        return `
+            <div class="item-card" onclick="openPMod(${p.id})">
+                <img src="${p.img || ''}" class="card-thumb">
+                <div style="flex:1;">
+                    <b>${p.name}</b><br>
+                    <small>Position: D${s.r+1} W${s.c+1}</small>
+                    ${getBadges(p)}
+                </div>
+            </div>`;
     }).join('');
 
     document.getElementById('p-list').innerHTML = state.plants.map(p => {
         let loc = "Not Planted"; state.areas.forEach(a => { if(a.spots.some(s => s.pId === p.id)) loc = a.name; });
-        return `<div class="item-card" onclick="openPMod(${p.id})"><img src="${p.img || ''}" class="card-thumb"><div style="flex:1;"><b>${p.name}</b><br><small> ${loc}</small></div></div>`;
+        return `
+            <div class="item-card" onclick="openPMod(${p.id})">
+                <img src="${p.img || ''}" class="card-thumb">
+                <div style="flex:1;">
+                    <b>${p.name}</b><br>
+                    <small>📍 ${loc}</small>
+                    ${getBadges(p)}
+                </div>
+            </div>`;
     }).join('');
 
     document.getElementById('h-list').innerHTML = state.harvests.sort((a,b)=>new Date(b.date)-new Date(a.date)).map(h => `
-        <div class="item-card" onclick="openHMod(${h.id})"><img src="${h.img || ''}" class="card-thumb"><div style="flex:1;"><b>${h.plantName}</b><br><small>${h.date} | ${h.amount}</small><br><span style="color:var(--gold)">${''.repeat(h.rating)}</span></div></div>`).join('');
+        <div class="item-card" onclick="openHMod(${h.id})">
+            <img src="${h.img || ''}" class="card-thumb">
+            <div style="flex:1;">
+                <b>${h.plantName}</b><br>
+                <small>${h.date} | ${h.amount}</small><br>
+                <span style="color:var(--gold)">${'★'.repeat(h.rating)}</span>
+            </div>
+        </div>`).join('');
 }
 
 function roomCare(type) { if(!confirm(`Mark all in ${state.areas[state.activeIdx].name} as ${type}?`)) return; state.areas[state.activeIdx].spots.forEach(s => { const p = state.plants.find(x => x.id === s.pId); if(p) p.notes += `\n[${getISODate()}] ${type}`; }); save(); }
@@ -309,7 +388,11 @@ function openPMod(id = null) {
     document.getElementById('pPrev').innerHTML = p && p.img ? `<img id="mainPImg" src="${p.img}" style="width:100%;height:100%;object-fit:cover;">` : "No Photo";
     pendingPImg = p ? p.img : null;
     
-    // NEW: Safely extract the RGB and Alpha from the saved color string
+    curSun = p && p.sun ? p.sun : 'med';
+    curWater = p && p.water ? p.water : 'med';
+    setReq('sun', curSun);
+    setReq('water', curWater);
+    
     selectedColor = p ? (p.color || "rgba(45, 106, 79, 0.7)") : "rgba(45, 106, 79, 0.7)";
     let match = selectedColor.match(/rgba\((.*?),\s*([\d.]+)\)/);
     if(match) { selectedRGB = match[1]; selectedAlpha = parseFloat(match[2]); }
@@ -320,8 +403,7 @@ function openPMod(id = null) {
         let dotRGB = d.dataset.rgb.replace(/\s/g, '');
         let selRGB = selectedRGB.replace(/\s/g, '');
         d.classList.toggle('active', dotRGB === selRGB);
-        // Live preview of the opacity on all buttons
-        d.style.background = `rgba(${d.dataset.rgb}, ${selectedAlpha})`;
+        d.style.background = `rgba(${d.dataset.rgb}, ${selectedAlpha})`; 
     });
 
     const isIn = state.areas.some(a => a.spots.some(s => s.pId === id));
@@ -335,7 +417,18 @@ function openPMod(id = null) {
 function saveP() {
     const name = document.getElementById('pName').value;
     if(!name) return alert("Please enter a name");
-    const p = { id: currentPlantID || Date.now(), name, notes: document.getElementById('pNotes').value, img: pendingPImg || "", timeline: currentTimeline, color: selectedColor };
+    
+    const p = { 
+        id: currentPlantID || Date.now(), 
+        name, 
+        notes: document.getElementById('pNotes').value, 
+        img: pendingPImg || "", 
+        timeline: currentTimeline, 
+        color: selectedColor,
+        sun: curSun,
+        water: curWater
+    };
+    
     if(currentPlantID) { let idx = state.plants.findIndex(x => x.id === currentPlantID); state.plants[idx] = p; } else state.plants.push(p);
     closeMod('pModal'); save();
 }
@@ -348,7 +441,6 @@ function deletePlant() {
     }
 }
 
-// NEW: Handlers for the color selection and the opacity slider
 function setPlantColor(el) { 
     selectedRGB = el.dataset.rgb; 
     selectedColor = `rgba(${selectedRGB}, ${selectedAlpha})`;
@@ -361,7 +453,7 @@ function updateOpacity(val) {
     document.querySelectorAll('.color-dot').forEach(d => d.style.background = `rgba(${d.dataset.rgb}, ${selectedAlpha})`);
 }
 
-function renderTimeline() { document.getElementById('timeline-list').innerHTML = currentTimeline.map((item, idx) => `<div class="timeline-item"><img src="${item.img}" class="timeline-thumb" onclick="previewImg('${item.img}')"><span class="timeline-date">${item.date}</span><div class="t-del" onclick="deleteTimelineItem(${idx})"></div></div>`).join(''); }
+function renderTimeline() { document.getElementById('timeline-list').innerHTML = currentTimeline.map((item, idx) => `<div class="timeline-item"><img src="${item.img}" class="timeline-thumb" onclick="previewImg('${item.img}')"><span class="timeline-date">${item.date}</span><div class="t-del" onclick="deleteTimelineItem(${idx})">✕</div></div>`).join(''); }
 function addTimelinePhoto(input) { if(!input.files[0]) return; resize(input.files[0], 1200).then(data => { currentTimeline.push({ img: data, date: getISODate() }); renderTimeline(); }); }
 function deleteTimelineItem(idx) { if(confirm("Delete photo?")) { currentTimeline.splice(idx, 1); renderTimeline(); } }
 
