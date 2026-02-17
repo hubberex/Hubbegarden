@@ -65,7 +65,7 @@ header { background: var(--white); padding: 8px 12px; border-bottom: 1px solid #
 .t-del { position: absolute; top: -5px; right: -5px; background: var(--red); color: white; width: 22px; height: 22px; border-radius: 50%; font-size: 10px; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 2px solid white; z-index: 5; }
 
 .color-row { display: flex; justify-content: space-between; margin: 10px 0; gap: 10px; }
-.color-dot { width: 44px; height: 44px; border-radius: 50%; border: 3px solid #eee; cursor: pointer; transition: 0.2s; }
+.color-dot { width: 36px; height: 36px; border-radius: 50%; border: 3px solid #eee; cursor: pointer; transition: 0.2s; }
 .color-dot.active { border-color: #333 !important; transform: scale(1.15); box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
 
 .req-row { display: flex; gap: 10px; margin-top: 6px; }
@@ -170,7 +170,7 @@ header { background: var(--white); padding: 8px 12px; border-bottom: 1px solid #
         <button class="req-btn" data-type="water" data-val="high" onclick="setReq('water', 'high')">🌊<span>Daily</span></button>
     </div>
 
-    <label class="field-label">CARE LOG / HISTORY</label><textarea id="pNotes" class="h-input" style="height:100px; resize:none;"></textarea>
+    <label class="field-label">CARE LOG / HISTORY</label><textarea id="pNotes" class="h-input" style="height:150px; resize:none; font-size:0.85rem;"></textarea>
     
     <label class="field-label">COLOR & OPACITY</label>
     <div class="color-row">
@@ -201,8 +201,11 @@ header { background: var(--white); padding: 8px 12px; border-bottom: 1px solid #
 
 <div id="hModal" class="modal" onclick="checkClose(event, 'hModal')"><div class="modal-content">
     <h3 style="margin-top:0">Log Harvest</h3>
-    <div id="hPrev" style="width:100%;height:150px;background:#f0f0f0;border-radius:20px;display:flex;align-items:center;justify-content:center;overflow:hidden;border:2px dashed #ccc;" onclick="document.getElementById('hIn').click()">Photo</div>
+    
+    <div id="hPrev" style="width:100%;height:150px;background:#f0f0f0;border-radius:20px;display:flex;align-items:center;justify-content:center;overflow:hidden;border:2px dashed #ccc;" onclick="previewHarvestCover()">No Photo</div>
+    <button class="btn-compact" style="background:var(--blue); color:white;" onclick="document.getElementById('hIn').click()">CHANGE PHOTO</button>
     <input type="file" id="hIn" hidden accept="image/*" onchange="handleHFile(this)">
+    
     <label class="field-label">DATE</label><input type="date" id="hDate" class="h-input">
     <label class="field-label">PLANT</label><select id="hPlantSel" class="h-input"></select>
     <label class="field-label">AMOUNT</label><input type="text" id="hAmount" class="h-input" placeholder="e.g. 500g, 2 baskets">
@@ -342,7 +345,8 @@ function openHMod(id = null) {
     document.getElementById('hAmount').value = h ? h.amount : ""; 
     document.getElementById('hPlantSel').innerHTML = state.plants.map(p => `<option value="${p.id}" ${h && h.plantId == p.id ? 'selected' : ''}>${p.name}</option>`).join(''); 
     pendingHImg = h ? h.img : null; 
-    document.getElementById('hPrev').innerHTML = pendingHImg ? `<img src="${pendingHImg}" style="width:100%;height:100%;object-fit:cover;">` : "Photo"; 
+    // CHANGED: Added id="mainHImg" to the tag so previewHarvestCover knows what to enlarge
+    document.getElementById('hPrev').innerHTML = pendingHImg ? `<img id="mainHImg" src="${pendingHImg}" style="width:100%;height:100%;object-fit:cover;">` : "No Photo"; 
     setStar(h ? h.rating : 0); 
     document.getElementById('hDelBtn').style.display = h ? "block" : "none"; 
     openMod('hModal'); 
@@ -450,7 +454,9 @@ function handleFile(input, type) {
 }
 
 function resize(f, m) { return new Promise(r => { const rd = new FileReader(); rd.onload = e => { const i = new Image(); i.onload = () => { const c = document.createElement('canvas'); let w=i.width, h=i.height; if(w>m){ h*=m/w; w=m; } c.width=w; c.height=h; c.getContext('2d').drawImage(i,0,0,w,h); r(c.toDataURL('image/jpeg', 0.85)); }; i.src = e.target.result; }; rd.readAsDataURL(f); }); }
-function handleHFile(i) { resize(i.files[0], 1000).then(d => { pendingHImg = d; document.getElementById('hPrev').innerHTML = `<img src="${d}" style="width:100%;height:100%;object-fit:cover;">`; }); }
+
+// CHANGED: Added id="mainHImg" during the resize callback as well
+function handleHFile(i) { resize(i.files[0], 1000).then(d => { pendingHImg = d; document.getElementById('hPrev').innerHTML = `<img id="mainHImg" src="${d}" style="width:100%;height:100%;object-fit:cover;">`; }); }
 
 function enterFlow() { closeMod('pModal'); showV('garden'); flowActive = true; alert("Tap the grid cell to place your plant."); }
 function showV(v) { if (v !== 'garden') { flowActive = false; } document.querySelectorAll('.view').forEach(e => e.classList.remove('active')); document.getElementById('view-'+v).classList.add('active'); document.querySelectorAll('.nav-tab').forEach(t => t.classList.toggle('active', t.id === 'nav-'+v)); render(); }
@@ -465,7 +471,12 @@ function openMod(id) {
 }
 
 function closeMod(id) { document.getElementById(id).style.display='none'; }
+
 function previewCover() { const imgEl = document.getElementById('mainPImg'); if(imgEl) previewImg(imgEl.src); }
+
+// NEW: Function to grab the harvest image and send it to the full-screen modal
+function previewHarvestCover() { const imgEl = document.getElementById('mainHImg'); if(imgEl) previewImg(imgEl.src); }
+
 function previewImg(src) { document.getElementById('fullImgSrc').src = src; openMod('fullImgMod'); }
 
 function roomSwitch(v) { 
