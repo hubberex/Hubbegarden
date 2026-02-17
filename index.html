@@ -68,7 +68,6 @@ header { background: var(--white); padding: 12px; border-bottom: 1px solid #ddd;
 .color-dot { width: 44px; height: 44px; border-radius: 50%; border: 3px solid #eee; cursor: pointer; transition: 0.2s; }
 .color-dot.active { border-color: #333 !important; transform: scale(1.15); box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
 
-/* Requirements Styling */
 .req-row { display: flex; gap: 10px; margin-top: 6px; }
 .req-btn { flex: 1; border: 2px solid #eee; background: white; border-radius: 12px; padding: 8px; font-size: 1.2rem; cursor: pointer; transition: 0.2s; display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .req-btn span { font-size: 0.6rem; font-weight: 800; color: #888; text-transform: uppercase; }
@@ -76,7 +75,6 @@ header { background: var(--white); padding: 12px; border-bottom: 1px solid #ddd;
 .req-btn.active[data-type="sun"] { border-color: var(--gold); background: #fffdf0; }
 .req-btn.active[data-type="water"] { border-color: var(--blue); background: #f0f7ff; }
 
-/* Badge Styling */
 .card-meta { display: flex; gap: 8px; margin-top: 4px; align-items: center; }
 .badge { font-size: 0.6rem; font-weight: 800; padding: 2px 6px; border-radius: 6px; display: flex; align-items: center; gap: 3px; }
 .badge-sun { background: #fffdf0; color: #b08d00; border: 1px solid #ffeaa7; }
@@ -141,7 +139,9 @@ header { background: var(--white); padding: 12px; border-bottom: 1px solid #ddd;
     <div id="pPrev" style="width:100%;height:160px;background:#f8f8f8;border-radius:20px;display:flex;align-items:center;justify-content:center;overflow:hidden;border:2px dashed #ddd;" onclick="previewCover()">No Photo</div>
     <button class="btn-compact" style="background:var(--blue); color:white;" onclick="document.getElementById('pIn').click()">CHANGE COVER</button>
     <input type="file" id="pIn" hidden accept="image/*" onchange="handleFile(this, 'plant')">
+    
     <label class="field-label">NAME</label><input type="text" id="pName" class="h-input" placeholder="e.g. Tomato Row 1">
+    <label class="field-label">DATE PLANTED</label><input type="date" id="pDatePlanted" class="h-input">
     
     <label class="field-label">SUN NEED</label>
     <div class="req-row">
@@ -222,13 +222,21 @@ header { background: var(--white); padding: 12px; border-bottom: 1px solid #ddd;
     <label class="field-label">Width (Number of Columns)</label><input type="number" id="gCols" class="h-input">
     <button class="btn-compact" style="background:var(--blue); color:white;" onclick="applyGridChanges()">SAVE SIZE</button>
     <button class="btn-compact" style="background:var(--rust); color:white;" onclick="startCal()">CALIBRATE CORNERS</button>
-    <button class="btn-compact" style="background:#eee; color:#333;" onclick="closeMod('settingsModal')">CLOSE</button>
+    
+    <hr style="margin: 20px 0; border: none; border-top: 1px solid #eee;">
+    
+    <label class="field-label" id="backupStatus">Last backup: Not saved</label>
+    <button class="btn-compact" style="background:var(--olive); color:white;" onclick="exportData()">📤 BACKUP DATA</button>
+    <button class="btn-compact" style="background:var(--dark); color:white;" onclick="document.getElementById('restoreIn').click()">📥 RESTORE DATA</button>
+    <input type="file" id="restoreIn" hidden accept=".json" onchange="importData(this)">
+
+    <button class="btn-compact" style="background:#eee; color:#333; margin-top:20px;" onclick="closeMod('settingsModal')">CLOSE</button>
 </div></div>
 
 <div id="fullImgMod" class="modal" onclick="closeMod('fullImgMod')"><img id="fullImgSrc" src="" style="max-width:95%; max-height:90%; border:2px solid white; border-radius:10px; box-shadow: 0 0 30px rgba(0,0,0,0.5);"></div>
 
 <script>
-let db, state = { areas: [{id:1, name:"Garden 1", img:null, spots:[], grid: {active:false, rows:4, cols:3, tl:{x:10,y:10}, tr:{x:90,y:10}, bl:{x:10,y:90}, br:{x:90,y:90}}}], plants: [], harvests: [], activeIdx: 0 };
+let db, state = { areas: [{id:1, name:"Garden 1", img:null, spots:[], grid: {active:false, rows:4, cols:3, tl:{x:10,y:10}, tr:{x:90,y:10}, bl:{x:10,y:90}, br:{x:90,y:90}}}], plants: [], harvests: [], activeIdx: 0, lastBackup: "Not saved" };
 let currentPlantID = null, currentHarvestID = null, flowActive = false, calActive = false, pendingPImg = null, pendingHImg = null, selHRating = 0, currentTimeline = [];
 let curSun = 'med', curWater = 'med';
 
@@ -250,7 +258,6 @@ function checkClose(e, id) { if(e.target.id === id) closeMod(id); }
 function setReq(type, val) {
     if(type === 'sun') curSun = val;
     if(type === 'water') curWater = val;
-    
     document.querySelectorAll(`.req-btn[data-type="${type}"]`).forEach(btn => {
         btn.classList.toggle('active', btn.dataset.val === val);
     });
@@ -261,12 +268,9 @@ function render() {
     const container = document.getElementById('canvas-container');
     const img = document.getElementById('garden-img');
     const svg = document.getElementById('grid-svg');
-    
     container.querySelectorAll('.spot').forEach(s => s.remove()); 
     svg.replaceChildren(); 
-    
     document.getElementById('roomSelector').innerHTML = state.areas.map((a, i) => `<option value="${i}" ${i==state.activeIdx?'selected':''}>${a.name}</option>`).join('') + '<option value="ADD">+ NEW ROOM</option>';
-
     if (area.img) {
         img.src = area.img; img.style.display = "block";
         const doDraw = () => {
@@ -274,86 +278,42 @@ function render() {
             const r = img.getBoundingClientRect(), c = container.getBoundingClientRect();
             const offX = r.left - c.left, offY = r.top - c.top;
             const proj = (p) => ({ x: offX + (p.x/100)*r.width, y: offY + (p.y/100)*r.height });
-            
             area.spots.forEach(s => {
                 const p = state.plants.find(x => x.id === s.pId); if(!p) return;
                 const u1 = s.c/area.grid.cols, u2 = (s.c+1)/area.grid.cols, v1 = s.r/area.grid.rows, v2 = (s.r+1)/area.grid.rows;
                 const pts = [getGridPoint(area.grid,u1,v1), getGridPoint(area.grid,u2,v1), getGridPoint(area.grid,u2,v2), getGridPoint(area.grid,u1,v2)].map(proj);
-                
                 const d = document.createElement('div'); d.className = 'spot';
                 d.style.left = '0px'; d.style.top = '0px'; d.style.width = c.width+'px'; d.style.height = c.height+'px';
-                
                 d.style.background = p.color || "rgba(45, 106, 79, 0.7)"; 
-                
                 d.style.clipPath = `polygon(${pts[0].x}px ${pts[0].y}px, ${pts[1].x}px ${pts[1].y}px, ${pts[2].x}px ${pts[2].y}px, ${pts[3].x}px ${pts[3].y}px)`;
-                
                 const lbl = document.createElement('span'); lbl.className = 'spot-label'; 
                 lbl.style.left = `${(pts[0].x+pts[2].x)/2}px`; lbl.style.top = `${(pts[0].y+pts[2].y)/2}px`; 
                 lbl.textContent = p.name;
-                
                 d.onclick = (e) => { e.stopPropagation(); openPMod(p.id); }; 
                 d.appendChild(lbl); container.appendChild(d);
             });
             drawGrid(proj, area);
         };
         if(img.complete) doDraw(); else img.onload = doDraw;
-    } else { 
-        img.src = ""; img.style.display = 'none'; svg.classList.remove('active'); 
-    }
+    } else { img.src = ""; img.style.display = 'none'; svg.classList.remove('active'); }
     renderLists(area);
 }
 
 function renderLists(area) {
     const getIcon = (type, val) => {
-        const icons = {
-            sun: { low: '☁️', med: '⛅', high: '☀️' },
-            water: { low: '🌵', med: '💧', high: '🌊' }
-        };
+        const icons = { sun: { low: '☁️', med: '⛅', high: '☀️' }, water: { low: '🌵', med: '💧', high: '🌊' } };
         return icons[type][val] || icons[type]['med'];
     };
-
-    const getBadges = (p) => `
-        <div class="card-meta">
-            <span class="badge badge-sun">${getIcon('sun', p.sun)} ${p.sun?.toUpperCase() || 'MED'}</span>
-            <span class="badge badge-water">${getIcon('water', p.water)} ${p.water?.toUpperCase() || 'MED'}</span>
-        </div>
-    `;
-
+    const getBadges = (p) => `<div class="card-meta"><span class="badge badge-sun">${getIcon('sun', p.sun)} ${p.sun?.toUpperCase() || 'MED'}</span><span class="badge badge-water">${getIcon('water', p.water)} ${p.water?.toUpperCase() || 'MED'}</span></div>`;
     document.getElementById('garden-card-list').innerHTML = [...new Set(area.spots.map(s => s.pId))].map(pid => {
         const p = state.plants.find(x => x.id === pid); const s = area.spots.find(x => x.pId === pid);
-        return `
-            <div class="item-card" onclick="openPMod(${p.id})">
-                <img src="${p.img || ''}" class="card-thumb">
-                <div style="flex:1;">
-                    <b>${p.name}</b><br>
-                    <small>Position: D${s.r+1} W${s.c+1}</small>
-                    ${getBadges(p)}
-                </div>
-            </div>`;
+        return `<div class="item-card" onclick="openPMod(${p.id})"><img src="${p.img || ''}" class="card-thumb"><div style="flex:1;"><b>${p.name}</b><br><small>Position: D${s.r+1} W${s.c+1} | 🌱 ${p.datePlanted || 'No date'}</small>${getBadges(p)}</div></div>`;
     }).join('');
-
     document.getElementById('p-list').innerHTML = state.plants.map(p => {
         let loc = "Not Planted"; state.areas.forEach(a => { if(a.spots.some(s => s.pId === p.id)) loc = a.name; });
-        return `
-            <div class="item-card" onclick="openPMod(${p.id})">
-                <img src="${p.img || ''}" class="card-thumb">
-                <div style="flex:1;">
-                    <b>${p.name}</b><br>
-                    <small>📍 ${loc}</small>
-                    ${getBadges(p)}
-                </div>
-            </div>`;
+        return `<div class="item-card" onclick="openPMod(${p.id})"><img src="${p.img || ''}" class="card-thumb"><div style="flex:1;"><b>${p.name}</b><br><small>📍 ${loc} | 🌱 ${p.datePlanted || 'No date'}</small>${getBadges(p)}</div></div>`;
     }).join('');
-
-    document.getElementById('h-list').innerHTML = state.harvests.sort((a,b)=>new Date(b.date)-new Date(a.date)).map(h => `
-        <div class="item-card" onclick="openHMod(${h.id})">
-            <img src="${h.img || ''}" class="card-thumb">
-            <div style="flex:1;">
-                <b>${h.plantName}</b><br>
-                <small>${h.date} | ${h.amount}</small><br>
-                <span style="color:var(--gold)">${'★'.repeat(h.rating)}</span>
-            </div>
-        </div>`).join('');
+    document.getElementById('h-list').innerHTML = state.harvests.sort((a,b)=>new Date(b.date)-new Date(a.date)).map(h => `<div class="item-card" onclick="openHMod(${h.id})"><img src="${h.img || ''}" class="card-thumb"><div style="flex:1;"><b>${h.plantName}</b><br><small>${h.date} | ${h.amount}</small><br><span style="color:var(--gold)">${'★'.repeat(h.rating)}</span></div></div>`).join('');
 }
 
 function roomCare(type) { if(!confirm(`Mark all in ${state.areas[state.activeIdx].name} as ${type}?`)) return; state.areas[state.activeIdx].spots.forEach(s => { const p = state.plants.find(x => x.id === s.pId); if(p) p.notes += `\n[${getISODate()}] ${type}`; }); save(); }
@@ -384,51 +344,41 @@ function openPMod(id = null) {
     currentPlantID = id; const p = id ? state.plants.find(x => x.id === id) : null; 
     currentTimeline = p && p.timeline ? [...p.timeline] : [];
     document.getElementById('pName').value = p ? p.name : ""; 
+    document.getElementById('pDatePlanted').value = p && p.datePlanted ? p.datePlanted : getISODate();
     document.getElementById('pNotes').value = p ? (p.notes || "") : "";
     document.getElementById('pPrev').innerHTML = p && p.img ? `<img id="mainPImg" src="${p.img}" style="width:100%;height:100%;object-fit:cover;">` : "No Photo";
     pendingPImg = p ? p.img : null;
-    
-    curSun = p && p.sun ? p.sun : 'med';
-    curWater = p && p.water ? p.water : 'med';
-    setReq('sun', curSun);
-    setReq('water', curWater);
-    
+    curSun = p && p.sun ? p.sun : 'med'; curWater = p && p.water ? p.water : 'med';
+    setReq('sun', curSun); setReq('water', curWater);
     selectedColor = p ? (p.color || "rgba(45, 106, 79, 0.7)") : "rgba(45, 106, 79, 0.7)";
     let match = selectedColor.match(/rgba\((.*?),\s*([\d.]+)\)/);
     if(match) { selectedRGB = match[1]; selectedAlpha = parseFloat(match[2]); }
-    
     document.getElementById('pOpacity').value = selectedAlpha;
-    
     document.querySelectorAll('.color-dot').forEach(d => {
-        let dotRGB = d.dataset.rgb.replace(/\s/g, '');
-        let selRGB = selectedRGB.replace(/\s/g, '');
-        d.classList.toggle('active', dotRGB === selRGB);
-        d.style.background = `rgba(${d.dataset.rgb}, ${selectedAlpha})`; 
+        let dotRGB = d.dataset.rgb.replace(/\s/g, ''); let selRGB = selectedRGB.replace(/\s/g, '');
+        d.classList.toggle('active', dotRGB === selRGB); d.style.background = `rgba(${d.dataset.rgb}, ${selectedAlpha})`; 
     });
-
     const isIn = state.areas.some(a => a.spots.some(s => s.pId === id));
     document.getElementById('garden-actions-wrap').style.display = (id && isIn) ? "block" : "none";
     document.getElementById('flow-btn-wrap').style.display = (p && !isIn) ? "block" : "none";
     document.getElementById('pDelBtn').style.display = id ? "block" : "none";
-    
     renderTimeline(); openMod('pModal');
 }
 
 function saveP() {
     const name = document.getElementById('pName').value;
     if(!name) return alert("Please enter a name");
-    
     const p = { 
         id: currentPlantID || Date.now(), 
         name, 
         notes: document.getElementById('pNotes').value, 
         img: pendingPImg || "", 
         timeline: currentTimeline, 
-        color: selectedColor,
-        sun: curSun,
-        water: curWater
+        color: selectedColor, 
+        sun: curSun, 
+        water: curWater,
+        datePlanted: document.getElementById('pDatePlanted').value
     };
-    
     if(currentPlantID) { let idx = state.plants.findIndex(x => x.id === currentPlantID); state.plants[idx] = p; } else state.plants.push(p);
     closeMod('pModal'); save();
 }
@@ -441,18 +391,8 @@ function deletePlant() {
     }
 }
 
-function setPlantColor(el) { 
-    selectedRGB = el.dataset.rgb; 
-    selectedColor = `rgba(${selectedRGB}, ${selectedAlpha})`;
-    document.querySelectorAll('.color-dot').forEach(d => d.classList.toggle('active', d === el)); 
-}
-
-function updateOpacity(val) {
-    selectedAlpha = val;
-    selectedColor = `rgba(${selectedRGB}, ${selectedAlpha})`;
-    document.querySelectorAll('.color-dot').forEach(d => d.style.background = `rgba(${d.dataset.rgb}, ${selectedAlpha})`);
-}
-
+function setPlantColor(el) { selectedRGB = el.dataset.rgb; selectedColor = `rgba(${selectedRGB}, ${selectedAlpha})`; document.querySelectorAll('.color-dot').forEach(d => d.classList.toggle('active', d === el)); }
+function updateOpacity(val) { selectedAlpha = val; selectedColor = `rgba(${selectedRGB}, ${selectedAlpha})`; document.querySelectorAll('.color-dot').forEach(d => d.style.background = `rgba(${d.dataset.rgb}, ${selectedAlpha})`); }
 function renderTimeline() { document.getElementById('timeline-list').innerHTML = currentTimeline.map((item, idx) => `<div class="timeline-item"><img src="${item.img}" class="timeline-thumb" onclick="previewImg('${item.img}')"><span class="timeline-date">${item.date}</span><div class="t-del" onclick="deleteTimelineItem(${idx})">✕</div></div>`).join(''); }
 function addTimelinePhoto(input) { if(!input.files[0]) return; resize(input.files[0], 1200).then(data => { currentTimeline.push({ img: data, date: getISODate() }); renderTimeline(); }); }
 function deleteTimelineItem(idx) { if(confirm("Delete photo?")) { currentTimeline.splice(idx, 1); renderTimeline(); } }
@@ -495,25 +435,14 @@ function handleFile(input, type) {
 function resize(f, m) { return new Promise(r => { const rd = new FileReader(); rd.onload = e => { const i = new Image(); i.onload = () => { const c = document.createElement('canvas'); let w=i.width, h=i.height; if(w>m){ h*=m/w; w=m; } c.width=w; c.height=h; c.getContext('2d').drawImage(i,0,0,w,h); r(c.toDataURL('image/jpeg', 0.85)); }; i.src = e.target.result; }; rd.readAsDataURL(f); }); }
 function handleHFile(i) { resize(i.files[0], 1000).then(d => { pendingHImg = d; document.getElementById('hPrev').innerHTML = `<img src="${d}" style="width:100%;height:100%;object-fit:cover;">`; }); }
 
-function enterFlow() { 
-    closeMod('pModal'); 
-    showV('garden'); 
-    flowActive = true; 
-    alert("Tap the grid cell to place your plant. You can cancel by clicking the Library tab."); 
-}
-
-function showV(v) { 
-    if (v !== 'garden') { flowActive = false; }
-    document.querySelectorAll('.view').forEach(e => e.classList.remove('active')); 
-    document.getElementById('view-'+v).classList.add('active'); 
-    document.querySelectorAll('.nav-tab').forEach(t => t.classList.toggle('active', t.id === 'nav-'+v)); 
-    render(); 
-}
+function enterFlow() { closeMod('pModal'); showV('garden'); flowActive = true; alert("Tap the grid cell to place your plant."); }
+function showV(v) { if (v !== 'garden') { flowActive = false; } document.querySelectorAll('.view').forEach(e => e.classList.remove('active')); document.getElementById('view-'+v).classList.add('active'); document.querySelectorAll('.nav-tab').forEach(t => t.classList.toggle('active', t.id === 'nav-'+v)); render(); }
 
 function openMod(id) { 
     if (id === 'settingsModal') {
         document.getElementById('gRows').value = state.areas[state.activeIdx].grid.rows;
         document.getElementById('gCols').value = state.areas[state.activeIdx].grid.cols;
+        document.getElementById('backupStatus').textContent = "Last backup: " + (state.lastBackup || "Not saved");
     }
     document.getElementById(id).style.display='flex'; 
 }
@@ -525,35 +454,47 @@ function previewImg(src) { document.getElementById('fullImgSrc').src = src; open
 function roomSwitch(v) { 
     if(v==='ADD'){ 
         const n=prompt("Room Name?"); 
-        if(n){ 
-            state.areas.push({id:Date.now(), name:n, img:null, spots:[], grid:{active:false, rows:4, cols:3, tl:{x:10,y:10}, tr:{x:90,y:10}, bl:{x:10,y:90}, br:{x:90,y:90}}}); 
-            state.activeIdx=state.areas.length-1; save(); 
-        } else {
-            render();
-        }
+        if(n){ state.areas.push({id:Date.now(), name:n, img:null, spots:[], grid:{active:false, rows:4, cols:3, tl:{x:10,y:10}, tr:{x:90,y:10}, bl:{x:10,y:90}, br:{x:90,y:90}}}); state.activeIdx=state.areas.length-1; save(); } else render();
     } else { state.activeIdx = parseInt(v); render(); } 
 }
 
-function applyGridChanges() { 
-    state.areas[state.activeIdx].grid.rows = Math.max(1, parseInt(document.getElementById('gRows').value)); 
-    state.areas[state.activeIdx].grid.cols = Math.max(1, parseInt(document.getElementById('gCols').value)); 
-    save(); 
-}
-
+function applyGridChanges() { state.areas[state.activeIdx].grid.rows = Math.max(1, parseInt(document.getElementById('gRows').value)); state.areas[state.activeIdx].grid.cols = Math.max(1, parseInt(document.getElementById('gCols').value)); save(); }
 function togGrid() { state.areas[state.activeIdx].grid.active = !state.areas[state.activeIdx].grid.active; render(); }
 function startCal() { closeMod('settingsModal'); calActive = true; document.getElementById('cal-done-float').style.display='block'; render(); }
 function stopCal() { calActive = false; document.getElementById('cal-done-float').style.display='none'; save(); }
 function deleteHarvest() { if(confirm("Delete this log?")) { state.harvests = state.harvests.filter(x => x.id !== currentHarvestID); closeMod('hModal'); save(); } }
-
-function removeFromGarden() { 
-    const p = state.plants.find(x => x.id === currentPlantID);
-    if(p) p.notes += `\n[${getISODate()}] Removed from Space`;
-    state.areas.forEach(a => { a.spots = a.spots.filter(s => s.pId !== currentPlantID); }); 
-    closeMod('pModal'); save(); 
-}
-
+function removeFromGarden() { const p = state.plants.find(x => x.id === currentPlantID); if(p) p.notes += `\n[${getISODate()}] Removed from Space`; state.areas.forEach(a => { a.spots = a.spots.filter(s => s.pId !== currentPlantID); }); closeMod('pModal'); save(); }
 function renameRoom() { const n = prompt("Rename to:", state.areas[state.activeIdx].name); if(n) { state.areas[state.activeIdx].name = n; save(); } }
 function deleteRoom() { if(state.areas.length <= 1) return alert("Cannot delete the last room."); if(confirm("Delete room?")) { state.areas.splice(state.activeIdx, 1); state.activeIdx = 0; save(); } }
+
+function exportData() {
+    const data = JSON.stringify(state);
+    const blob = new Blob([data], {type: 'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `hubbe_backup_${getISODate()}.json`;
+    a.click();
+    state.lastBackup = new Date().toLocaleString();
+    save();
+}
+
+function importData(input) {
+    if(!input.files[0]) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+        try {
+            const imported = JSON.parse(e.target.result);
+            if(imported.areas && imported.plants) {
+                state = imported;
+                save();
+                alert("Restore successful!");
+                location.reload();
+            }
+        } catch(err) { alert("Invalid backup file."); }
+    };
+    reader.readAsText(input.files[0]);
+}
 
 document.querySelectorAll('.anchor').forEach(a => {
     const mv = (e) => { if(!calActive) return; const t = e.touches ? e.touches[0] : e; const r = document.getElementById('garden-img').getBoundingClientRect();
