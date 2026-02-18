@@ -1,4 +1,4 @@
-const CACHE_NAME = "hubbe-cache-v2";
+const CACHE_NAME = "hubbe-cache-v6";
 
 const urlsToCache = [
   "/Hubbegarden/",
