@@ -1,8 +1,9 @@
-const CACHE_NAME = "hubbe-cache-v1";
+const CACHE_NAME = "hubbe-cache-v2";
+
 const urlsToCache = [
-  "./",
-  "./index.html",
-  "./manifest.json"
+  "/Hubbegarden/",
+  "/Hubbegarden/index.html",
+  "/Hubbegarden/manifest.json"
 ];
 
 self.addEventListener("install", event => {
