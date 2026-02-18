@@ -1,9 +1,16 @@
 {
   "name": "Hubbe Garden",
   "short_name": "Hubbe",
-  "start_url": "/Hubbegarden/",
-  "scope": "/Hubbegarden/",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#FEFAE0",
-  "theme_color": "#606C38"
+  "theme_color": "#606C38",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
 }
